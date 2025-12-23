@@ -9,6 +9,9 @@ const processBtn = document.getElementById('process');
 const results = document.getElementById('results');
 const gainTypeRadios = document.querySelectorAll('input[name="gainType"]');
 
+const MAX_GAIN_DB = 9;
+const MAX_GAIN_LINEAR = Math.pow(10, MAX_GAIN_DB / 20);
+
 let files = [];
 
 function setFilesFromList(fileList) {
@@ -57,6 +60,24 @@ function parseGainList(raw) {
     return values;
 }
 
+function validateGains(gains, isDb) {
+    if (!Array.isArray(gains) || !gains.length) return 'Enter one or more gains (comma-separated).';
+    if (gains.some(v => !Number.isFinite(v))) return 'Gain list contains non-finite value(s).';
+    if (isDb) {
+        const tooHigh = gains.find(g => g > MAX_GAIN_DB);
+        if (tooHigh !== undefined) return `Max gain is +${MAX_GAIN_DB} dB.`;
+        return null;
+    }
+
+    const bad = gains.find(g => g <= 0);
+    if (bad !== undefined) return 'Linear gains must be > 0.';
+
+    const tooHigh = gains.find(g => g > MAX_GAIN_LINEAR);
+    if (tooHigh !== undefined) return `Max linear gain is ${MAX_GAIN_LINEAR.toFixed(5)} (equivalent to +${MAX_GAIN_DB} dB).`;
+
+    return null;
+}
+
 // Handle gain type change
 gainTypeRadios.forEach(radio => {
     radio.addEventListener('change', () => {
@@ -79,16 +100,25 @@ function updateDropZoneDisplay() {
     if (files.length > 0) {
         const selectedType = document.querySelector('input[name="gainType"]:checked').value;
         let gains;
+        let isDb;
         try {
-            gains = selectedType === 'db' ? parseGainList(gainDbInput.value) : parseGainList(gainLinearInput.value);
+            if (selectedType === 'db') {
+                gains = parseGainList(gainDbInput.value);
+                isDb = true;
+            } else {
+                gains = parseGainList(gainLinearInput.value);
+                isDb = false;
+            }
         } catch {
             dropZoneInstructions.textContent = 'Drop .nam files here';
             dropZoneOutput.textContent = 'Invalid gain list.';
             return;
         }
-        if (!gains.length) {
+
+        const validationError = validateGains(gains, isDb);
+        if (validationError) {
             dropZoneInstructions.textContent = 'Drop .nam files here';
-            dropZoneOutput.textContent = 'Enter one or more gains (comma-separated).';
+            dropZoneOutput.textContent = validationError;
             return;
         }
         let outputList = '';
@@ -153,19 +183,12 @@ processBtn.addEventListener('click', async () => {
         return;
     }
 
-    if (!gains.length) {
-        results.innerHTML = '';
-        results.classList.add('error');
-        showError('Enter one or more gains (comma-separated).');
-        return;
-    }
-
-    if (!isDb) {
-        const bad = gains.find(g => g <= 0);
-        if (bad !== undefined) {
+    {
+        const validationError = validateGains(gains, isDb);
+        if (validationError) {
             results.innerHTML = '';
             results.classList.add('error');
-            showError('Linear gains must be > 0.');
+            showError(validationError);
             return;
         }
     }

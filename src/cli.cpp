@@ -15,6 +15,9 @@ std::string CliHandler::usage() {
     return "Usage: nam-volume-knob --input <file> [--input <file> ...] [--output <file> | --output-dir <dir>] (--gain-db <dB[,dB...]> | --gain-linear <factor[,factor...]>)";
 }
 
+static constexpr float kMaxGainDb = 9.0f;
+static constexpr float kMaxGainLinear = 2.8183829312644537f; // pow(10, 9/20)
+
 static bool startsWith(const std::string& s, const std::string& prefix) {
     return s.size() >= prefix.size() && s.compare(0, prefix.size(), prefix) == 0;
 }
@@ -190,6 +193,32 @@ CliParseResult CliHandler::parseArgs(int argc, char* argv[]) {
         for (float g : args.gainLinears) {
             if (g <= 0.0f) {
                 result.error = "Error: --gain-linear values must be > 0 (required for log10 + metadata update).";
+                return result;
+            }
+        }
+    }
+
+    // Safety limit: cap maximum boost.
+    if (args.useDb) {
+        for (float g : args.gainDbs) {
+            if (!std::isfinite(g)) {
+                result.error = "Error: --gain-db values must be finite numbers.";
+                return result;
+            }
+            if (g > kMaxGainDb) {
+                result.error = "Error: Maximum allowed gain is +" + std::to_string(kMaxGainDb) + " dB. Got: " + std::to_string(g);
+                return result;
+            }
+        }
+    } else {
+        for (float g : args.gainLinears) {
+            if (!std::isfinite(g)) {
+                result.error = "Error: --gain-linear values must be finite numbers.";
+                return result;
+            }
+            if (g > kMaxGainLinear) {
+                result.error = "Error: Maximum allowed gain is +" + std::to_string(kMaxGainDb)
+                    + " dB (linear <= " + std::to_string(kMaxGainLinear) + "). Got: " + std::to_string(g);
                 return result;
             }
         }
