@@ -41,6 +41,17 @@ Requires Emscripten SDK.
 
 Note: you must serve the `web/` folder via a web server (opening `web/index.html` directly as a file often fails due to browser security restrictions around WASM/module loading).
 
+#### Publish on GitHub Pages
+
+This repo includes a GitHub Actions workflow that deploys the contents of `web/` to GitHub Pages.
+
+1. In GitHub: **Settings → Pages → Source → GitHub Actions**
+2. Push to `main` (or re-run the workflow in the **Actions** tab)
+
+Your Pages URL will be:
+
+`https://<username>.github.io/<repo>/`
+
 After building with Emscripten, run:
 
 ```bash
