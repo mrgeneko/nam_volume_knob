@@ -52,6 +52,16 @@ input[type="number"] {
     border-radius: 4px; 
 }
 
+input[type="text"] {
+    margin: 0 10px;
+    background-color: #333;
+    color: #ffffff;
+    border: 1px solid #555;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
 button { 
     padding: 15px 30px; 
     font-size: 32px;
@@ -113,4 +123,70 @@ button#choose-files:hover {
 
 #footer a:hover {
     text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+    body {
+        margin: 14px;
+        font-size: 18px;
+    }
+
+    h1 {
+        font-size: 34px;
+        margin-bottom: 8px;
+    }
+
+    small {
+        font-size: 16px;
+        margin-bottom: 16px;
+    }
+
+    #drop-zone {
+        padding: 48px 18px;
+        gap: 16px;
+    }
+
+    #drop-zone-instructions {
+        font-size: 22px;
+    }
+
+    #drop-zone-output {
+        font-size: 18px;
+        max-height: 260px;
+    }
+
+    input[type="radio"] {
+        transform: scale(1.25);
+    }
+
+    input[type="text"],
+    input[type="number"] {
+        font-size: 20px;
+        padding: 12px 12px;
+    }
+
+    /* Override inline width so inputs fill the phone screen nicely. */
+    #gain-db,
+    #gain-linear {
+        width: min(320px, 70vw) !important;
+    }
+
+    button {
+        font-size: 28px;
+        padding: 16px 28px;
+        border-radius: 16px;
+    }
+
+    button#choose-files {
+        font-size: 20px;
+        padding: 12px 18px;
+    }
+
+    #results {
+        font-size: 18px;
+    }
+
+    #footer {
+        font-size: 16px;
+    }
 }
