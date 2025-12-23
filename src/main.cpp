@@ -19,5 +19,13 @@ int main(int argc, char* argv[]) {
         return runResult.exitCode;
     }
 
+    if (!runResult.outputPaths.empty()) {
+        if (runResult.outputPaths.size() == 1) {
+            std::cout << "Wrote: " << runResult.outputPaths[0] << std::endl;
+        } else {
+            std::cout << "Wrote " << runResult.outputPaths.size() << " file(s)." << std::endl;
+        }
+    }
+
     return 0;
 }

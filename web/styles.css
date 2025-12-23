@@ -8,6 +8,7 @@ body {
 h1 { 
     text-align: center; 
     color: #ffffff; 
+    margin-bottom: 6px;
 }
 
 small {
@@ -15,6 +16,7 @@ small {
     text-align: center;
     font-size: 12px;
     color: #aaa;
+    margin-top: 0;
     margin-bottom: 20px;
 }
 
@@ -26,6 +28,11 @@ small {
     border-radius: 10px; 
     background-color: #1e1e1e; 
     color: #ffffff; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
 }
 
 #drop-zone.dragover { 
@@ -51,12 +58,35 @@ button {
     background-color: #444; 
     color: #ffffff; 
     border: none; 
-    border-radius: 4px; 
+    border-radius: 14px; 
     cursor: pointer; 
 }
 
 button:hover { 
     background-color: #555; 
+}
+
+button#process {
+    margin-bottom: 28px;
+}
+
+button#choose-files {
+    padding: 10px 18px;
+    font-size: 18px;
+    background-color: #333;
+}
+
+button#choose-files:hover {
+    background-color: #444;
+}
+
+#drop-zone-output {
+    width: 100%;
+    max-height: 220px;
+    overflow: auto;
+    color: #ddd;
+    font-size: 14px;
+    line-height: 1.4;
 }
 
 #results {
@@ -68,4 +98,19 @@ button:hover {
 
 #results.error {
     color: #ff6b6b;
+}
+
+#footer {
+    text-align: center;
+    margin-top: 12px;
+    font-size: 14px;
+}
+
+#footer a {
+    color: #8ab4f8;
+    text-decoration: none;
+}
+
+#footer a:hover {
+    text-decoration: underline;
 }
