@@ -2,12 +2,18 @@
 #define CLI_H
 
 #include <string>
+#include <vector>
 
 struct CliArgs {
-    std::string inputPath;
+    std::vector<std::string> inputPaths;
+
+    // Only valid when there is exactly one output.
     std::string outputPath;
-    float gainDb = 0.0f;
-    float gainLinear = 1.0f;
+    // If set, outputs are written into this directory (recommended for multi-output).
+    std::string outputDir;
+
+    std::vector<float> gainDbs;
+    std::vector<float> gainLinears;
     bool useDb = true;
     bool showHelp = false;
 };
@@ -21,7 +27,7 @@ struct CliParseResult {
 struct CliRunResult {
     int exitCode = 0;
     std::string error;
-    std::string outputPath;
+    std::vector<std::string> outputPaths;
 };
 
 class CliHandler {

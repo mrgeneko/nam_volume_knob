@@ -26,6 +26,8 @@ if(EMSCRIPTEN)
     add_executable(nam-volume-knob-web src/main.cpp ${SOURCES} src/web_bindings.cpp)
     set_target_properties(nam-volume-knob-web PROPERTIES SUFFIX ".js")
     target_link_libraries(nam-volume-knob-web --bind)
+    # Keep web UX friendly: prevent hard aborts on thrown exceptions.
+    target_link_options(nam-volume-knob-web PRIVATE "-sDISABLE_EXCEPTION_CATCHING=0")
 endif()
 
 # Tests
