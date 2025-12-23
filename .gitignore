@@ -1,0 +1,32 @@
+# OS / editor
+.DS_Store
+.vscode/
+
+# Build directories (CMake)
+/build/
+/build*/
+/build_native_nam_knob/
+/build_native_nam_knob2/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+install_manifest.txt
+
+# Compiled artifacts
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.d
+
+# Python
+__pycache__/
+*.pyc
+
+# Do not commit example models
+/example_models/

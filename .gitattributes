@@ -1,0 +1,26 @@
+# Normalize line endings across platforms
+* text=auto
+
+# Shell scripts should always use LF
+*.sh text eol=lf
+
+# Treat common binary formats as binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.7z binary
+*.wav binary
+*.mp3 binary
+*.ttf binary
+*.otf binary
+
+# WebAssembly outputs
+*.wasm binary
+
+# Model files (treat as binary to avoid diff noise)
+*.nam binary
