@@ -10,7 +10,6 @@ Note: This project was created with the help of AI-assisted coding tools.
 - **Web Interface**: Browser-based drag-and-drop tool (built with Emscripten) with single-click download.
 - **Architecture Support**: Compatible with all NAM architectures (LSTM, WaveNet, ConvNet, Linear, and variants).
 - **Overwrite Prevention**: Automatic versioning (_v2, _v3, etc.) to avoid overwriting existing files.
-- **Precision Handling**: Enforces 7-decimal precision for filenames to prevent excessively long names.
 - **Metadata Updates**: Adjusts loudness and output level metadata to reflect changes.
 - **Cross-Platform**: Works on macOS, Windows, and Linux.
 
@@ -113,8 +112,6 @@ Filenames include the gain value and type suffix (e.g., `model_+3_0db.nam` or `m
 
 ## Examples
 
-See `example_models/` for sample .nam files (LSTM and WaveNet).
-
 - Original: `lstm.nam`
 - +3.0 dB boost: `lstm_+3_0db.nam`
 - Linear 1.5x gain: `lstm_1_5lin.nam`
@@ -131,7 +128,6 @@ The tool identifies the head/output weights in the neural network (last weights 
 
 - Input gain values are limited to float precision (~7 significant digits).
 - Filenames capped at 7 decimal places to avoid OS limits.
-- No real-time processing; modifies model files for use in NAM-compatible hosts.
 
 ## Testing
 
