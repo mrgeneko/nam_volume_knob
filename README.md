@@ -4,6 +4,8 @@ A cross-platform tool for adjusting the output volume of NeuralAmpModeler (.nam)
 
 Note: This project was created with the help of AI-assisted coding tools.
 
+Try it here: https://mrgeneko.github.io/nam_volume_knob/
+
 ## Features
 
 - **CLI Tool**: Command-line interface for batch processing with dB or linear gain options.
