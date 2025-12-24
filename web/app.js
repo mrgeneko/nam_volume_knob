@@ -180,6 +180,13 @@ processBtn.addEventListener('click', async () => {
         results.innerHTML = '';
         results.classList.add('error');
         showError(e.message);
+        // Track parse errors
+        if (typeof gtag === 'function') {
+            gtag('event', 'nam_error', {
+                'error_type': 'gain_parse_error',
+                'error_message': e.message
+            });
+        }
         return;
     }
 
@@ -189,6 +196,13 @@ processBtn.addEventListener('click', async () => {
             results.innerHTML = '';
             results.classList.add('error');
             showError(validationError);
+            // Track validation errors
+            if (typeof gtag === 'function') {
+                gtag('event', 'nam_error', {
+                    'error_type': 'validation_error',
+                    'error_message': validationError
+                });
+            }
             return;
         }
     }
@@ -245,9 +259,26 @@ processBtn.addEventListener('click', async () => {
                 }
 
                 successCount++;
+
+                // Track each export with gain level
+                if (typeof gtag === 'function') {
+                    gtag('event', 'nam_export', {
+                        'gain_value': gainValue,
+                        'gain_type': isDb ? 'db' : 'linear',
+                        'file_name': file.name
+                    });
+                }
             }
         } catch (e) {
             showError(`Error processing ${file.name}: ${e.message}`);
+            // Track processing errors
+            if (typeof gtag === 'function') {
+                gtag('event', 'nam_error', {
+                    'error_type': 'processing_error',
+                    'error_message': e.message,
+                    'file_name': file.name
+                });
+            }
         }
     }
 
@@ -262,6 +293,17 @@ processBtn.addEventListener('click', async () => {
         a.click();
         a.remove();
         setTimeout(() => URL.revokeObjectURL(zipUrl), 2000);
+    }
+
+    // Track batch summary
+    if (successCount > 0 && typeof gtag === 'function') {
+        gtag('event', 'nam_export_batch', {
+            'file_count': files.length,
+            'gain_count': gains.length,
+            'total_exports': successCount,
+            'gain_type': isDb ? 'db' : 'linear',
+            'gain_levels': gains.join(',')
+        });
     }
 
     // Clear status text if there were no errors appended.
