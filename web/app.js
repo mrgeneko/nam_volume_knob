@@ -4,13 +4,10 @@ const chooseFilesBtn = document.getElementById('choose-files');
 const dropZoneInstructions = document.getElementById('drop-zone-instructions');
 const dropZoneOutput = document.getElementById('drop-zone-output');
 const gainDbInput = document.getElementById('gain-db');
-const gainLinearInput = document.getElementById('gain-linear');
 const processBtn = document.getElementById('process');
 const results = document.getElementById('results');
-const gainTypeRadios = document.querySelectorAll('input[name="gainType"]');
 
 const MAX_GAIN_DB = 9;
-const MAX_GAIN_LINEAR = Math.pow(10, MAX_GAIN_DB / 20);
 
 let files = [];
 
@@ -60,62 +57,29 @@ function parseGainList(raw) {
     return values;
 }
 
-function validateGains(gains, isDb) {
+function validateGains(gains) {
     if (!Array.isArray(gains) || !gains.length) return 'Enter one or more gains (comma-separated).';
     if (gains.some(v => !Number.isFinite(v))) return 'Gain list contains non-finite value(s).';
-    if (isDb) {
-        const tooHigh = gains.find(g => g > MAX_GAIN_DB);
-        if (tooHigh !== undefined) return `Max gain is +${MAX_GAIN_DB} dB.`;
-        return null;
-    }
-
-    const bad = gains.find(g => g <= 0);
-    if (bad !== undefined) return 'Linear gains must be > 0.';
-
-    const tooHigh = gains.find(g => g > MAX_GAIN_LINEAR);
-    if (tooHigh !== undefined) return `Max linear gain is ${MAX_GAIN_LINEAR.toFixed(5)} (equivalent to +${MAX_GAIN_DB} dB).`;
-
+    const tooHigh = gains.find(g => g > MAX_GAIN_DB);
+    if (tooHigh !== undefined) return `Max gain is +${MAX_GAIN_DB} dB.`;
     return null;
 }
 
-// Handle gain type change
-gainTypeRadios.forEach(radio => {
-    radio.addEventListener('change', () => {
-        if (radio.value === 'db') {
-            gainDbInput.disabled = false;
-            gainLinearInput.disabled = true;
-        } else {
-            gainDbInput.disabled = true;
-            gainLinearInput.disabled = false;
-        }
-        updateDropZoneDisplay();
-    });
-});
-
 // Update drop zone display when gain changes
 gainDbInput.addEventListener('input', updateDropZoneDisplay);
-gainLinearInput.addEventListener('input', updateDropZoneDisplay);
 
 function updateDropZoneDisplay() {
     if (files.length > 0) {
-        const selectedType = document.querySelector('input[name="gainType"]:checked').value;
         let gains;
-        let isDb;
         try {
-            if (selectedType === 'db') {
-                gains = parseGainList(gainDbInput.value);
-                isDb = true;
-            } else {
-                gains = parseGainList(gainLinearInput.value);
-                isDb = false;
-            }
+            gains = parseGainList(gainDbInput.value);
         } catch {
             dropZoneInstructions.textContent = 'Drop .nam files here';
             dropZoneOutput.textContent = 'Invalid gain list.';
             return;
         }
 
-        const validationError = validateGains(gains, isDb);
+        const validationError = validateGains(gains);
         if (validationError) {
             dropZoneInstructions.textContent = 'Drop .nam files here';
             dropZoneOutput.textContent = validationError;
@@ -124,10 +88,9 @@ function updateDropZoneDisplay() {
         let outputList = '';
         for (const file of files) {
             let base = file.name.replace('.nam', '');
-            let suffix = selectedType === 'db' ? 'db' : 'lin';
             for (const gainValue of gains) {
-                let gainStr = formatGain(gainValue, selectedType === 'db');
-                let outputName = base + '_' + gainStr + suffix + '.nam';
+                let gainStr = formatGain(gainValue, true);
+                let outputName = base + '_' + gainStr + 'db.nam';
                 outputList += outputName + '<br>';
             }
         }
@@ -165,17 +128,9 @@ fileInput.addEventListener('change', (e) => {
 });
 
 processBtn.addEventListener('click', async () => {
-    const selectedType = document.querySelector('input[name="gainType"]:checked').value;
     let gains;
-    let isDb;
     try {
-        if (selectedType === 'db') {
-            gains = parseGainList(gainDbInput.value);
-            isDb = true;
-        } else {
-            gains = parseGainList(gainLinearInput.value);
-            isDb = false;
-        }
+        gains = parseGainList(gainDbInput.value);
     } catch (e) {
         results.innerHTML = '';
         results.classList.add('error');
@@ -191,7 +146,7 @@ processBtn.addEventListener('click', async () => {
     }
 
     {
-        const validationError = validateGains(gains, isDb);
+        const validationError = validateGains(gains);
         if (validationError) {
             results.innerHTML = '';
             results.classList.add('error');
@@ -214,8 +169,6 @@ processBtn.addEventListener('click', async () => {
     }
     showStatus(`Processing ${files.length} file(s) × ${gains.length} gain(s)…`);
 
-    const suffixForName = isDb ? 'db' : 'lin';
-
     // If multiple files, prefer a single zip to avoid browser multi-download blocking.
     const totalOutputs = files.length * gains.length;
     const shouldZip = totalOutputs > 1 && typeof window.fflate !== 'undefined';
@@ -228,8 +181,8 @@ processBtn.addEventListener('click', async () => {
             const json = JSON.parse(text);
             const base = file.name.replace('.nam', '');
             for (const gainValue of gains) {
-                const factor = isDb ? Math.pow(10, gainValue / 20) : gainValue;
-                const gainDbForMetadata = isDb ? gainValue : 20 * Math.log10(gainValue);
+                const factor = Math.pow(10, gainValue / 20);
+                const gainDbForMetadata = gainValue;
 
                 const modified = Module.processNam(
                     JSON.stringify(json),
@@ -241,8 +194,8 @@ processBtn.addEventListener('click', async () => {
                     throw new Error(modified.replace(/^Error:\s*/, ''));
                 }
 
-                const gainStrForName = formatGain(gainValue, isDb);
-                const outputName = base + '_' + gainStrForName + suffixForName + '.nam';
+                const gainStrForName = formatGain(gainValue, true);
+                const outputName = base + '_' + gainStrForName + 'db.nam';
 
                 if (shouldZip) {
                     zipEntries[outputName] = window.fflate.strToU8(modified);
@@ -264,7 +217,7 @@ processBtn.addEventListener('click', async () => {
                 if (typeof gtag === 'function') {
                     gtag('event', 'nam_export', {
                         'gain_value': gainValue,
-                        'gain_type': isDb ? 'db' : 'linear',
+                        'gain_type': 'db',
                         'file_name': file.name
                     });
                 }
@@ -288,7 +241,7 @@ processBtn.addEventListener('click', async () => {
         const zipUrl = URL.createObjectURL(zipBlob);
         const a = document.createElement('a');
         a.href = zipUrl;
-        a.download = `nam_volume_knob_${suffixForName}.zip`;
+        a.download = 'nam_volume_knob_db.zip';
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -301,7 +254,7 @@ processBtn.addEventListener('click', async () => {
             'file_count': files.length,
             'gain_count': gains.length,
             'total_exports': successCount,
-            'gain_type': isDb ? 'db' : 'linear',
+            'gain_type': 'db',
             'gain_levels': gains.join(',')
         });
     }
