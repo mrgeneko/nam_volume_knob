@@ -20,6 +20,12 @@ small {
     margin-bottom: 20px;
 }
 
+.instruction-text {
+    text-align: center;
+    font-size: 22px;
+    margin-bottom: 20px;
+}
+
 #drop-zone { 
     border: 2px dashed #555; 
     padding: 80px 40px; 
@@ -139,6 +145,10 @@ button#choose-files:hover {
     small {
         font-size: 16px;
         margin-bottom: 16px;
+    }
+
+    .instruction-text {
+        font-size: 25px;
     }
 
     #drop-zone {
