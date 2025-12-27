@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,18 +13,21 @@
             s.src = 'https://www.googletagmanager.com/gtag/js?id=G-PJXPNYRJPG';
             document.head.appendChild(s);
             window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
+            function gtag() { dataLayer.push(arguments); }
             gtag('js', new Date());
             gtag('config', 'G-PJXPNYRJPG');
         }
     </script>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%3E%3Ctext%20y='.9em'%20font-size='90'%3E%F0%9F%8E%B8%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%3E%3Ctext%20y='.9em'%20font-size='90'%3E%F0%9F%8E%B8%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="styles.css">
     <script src="nam-volume-knob-web.js"></script>
 </head>
+
 <body>
     <h1>NAM Volume Knob</h1>
     <small>Vibed by Gene Ko</small>
+    <p class="instruction-text">Load a .nam file, set the desired gain level, then select 'Download'.</p>
     <div id="drop-zone">
         <div id="drop-zone-instructions">Drop .nam files here</div>
         <input id="file-input" type="file" accept=".nam" multiple style="display: none;" />
@@ -35,7 +39,8 @@
         <input type="text" id="gain-db" value="6" style="width: 220px;" placeholder="e.g. 3,6,7.5,9">
     </div>
     <div style="text-align: center; margin-bottom: 10px; color: #aaa; font-size: 12px;">
-        Tip: You can enter multiple gain levels (up to +9 db) separated by commas. A .nam file will be exported for each gain level. Max boost: +9 dB.
+        Tip: You can enter multiple gain levels (up to +9 db) separated by commas. A .nam file will be exported for each
+        gain level. Max boost: +9 dB.
     </div>
     <div style="text-align: center; margin-bottom: 10px; color: #aaa; font-size: 12px;">
         Please only submit NAM models with licenses that permit modifications.
@@ -45,9 +50,11 @@
     </div>
     <div id="results"></div>
     <div id="footer">
-        <a href="https://github.com/mrgeneko/nam_volume_knob/blob/main/README.md" target="_blank" rel="noopener noreferrer">learn more</a>
+        <a href="https://github.com/mrgeneko/nam_volume_knob/blob/main/README.md" target="_blank"
+            rel="noopener noreferrer">learn more</a>
     </div>
     <script src="vendor/fflate-0.8.2-umd.js"></script>
     <script src="app.js"></script>
 </body>
+
 </html>
