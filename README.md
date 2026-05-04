@@ -12,7 +12,7 @@ Try it here: [https://mrgeneko.github.io/nam_volume_knob/](https://mrgeneko.gith
 - **Web Interface**: Browser-based drag-and-drop tool (built with Emscripten) with single-click download.
 - **Architecture Support**: Compatible with all NAM architectures (LSTM, WaveNet, ConvNet, Linear, and variants).
 - **Overwrite Prevention**: Automatic versioning (_v2, _v3, etc.) to avoid overwriting existing files.
-- **Metadata Updates**: Adjusts loudness and output level metadata to reflect changes.
+- **Metadata Updates**: Adjusts `loudness` and `output_level_dbu` metadata to reflect the new output level.
 - **Cross-Platform**: Works on macOS, Windows, and Linux.
 
 ## Installation
@@ -124,7 +124,7 @@ The tool identifies the head/output weights in the neural network (last weights 
 
 - **dB Mode**: Factor = 10^(gain/20)
 - **Linear Mode**: Factor = gain value
-- **Metadata**: Updates `loudness` and `output_level_dbu` by the dB equivalent.
+- **Metadata**: Updates `loudness` and `output_level_dbu` to reflect the new output level (informational only — not used by NAM for normalization).
 
 ## Limitations
 

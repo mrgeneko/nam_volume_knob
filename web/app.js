@@ -247,7 +247,8 @@ processBtn.addEventListener('click', async () => {
                     gtag('event', 'nam_export', {
                         'gain_value': gainValue,
                         'gain_type': 'db',
-                        'file_name': file.name
+                        'file_name': file.name,
+                        'nam_version': typeof json.version === 'string' ? json.version : 'unknown'
                     });
                 }
             }
