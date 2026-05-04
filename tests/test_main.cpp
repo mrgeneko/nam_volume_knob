@@ -89,17 +89,20 @@ TEST_CASE("WeightScaler getHeadWeightIndices") {
         REQUIRE(end == 10);
     }
 
-    SECTION("ConvNet uses last 5 weights") {
-        json config = json::object();
-        auto [start, end] = WeightScaler::getHeadWeightIndices("ConvNet", config, 10);
-        REQUIRE(start == 5);
-        REQUIRE(end == 10);
+    SECTION("ConvNet uses (channels * out_channels + out_channels) tail weights") {
+        json config;
+        config["channels"] = 8;
+        config["out_channels"] = 1;
+        // head size = 8*1 + 1 = 9
+        auto [start, end] = WeightScaler::getHeadWeightIndices("ConvNet", config, 20);
+        REQUIRE(start == 11);
+        REQUIRE(end == 20);
     }
 
-    SECTION("WaveNet uses last 10 weights") {
+    SECTION("WaveNet uses last weight (head_scale)") {
         json config = json::object();
         auto [start, end] = WeightScaler::getHeadWeightIndices("WaveNet", config, 15);
-        REQUIRE(start == 5);
+        REQUIRE(start == 14);
         REQUIRE(end == 15);
     }
 
@@ -132,17 +135,29 @@ TEST_CASE("WeightScaler tryGetHeadWeightIndices errors") {
         REQUIRE_FALSE(err.empty());
     }
 
-    SECTION("ConvNet weights too small") {
+    SECTION("ConvNet missing channels") {
         json config = json::object();
-        REQUIRE_FALSE(WeightScaler::tryGetHeadWeightIndices("ConvNet", config, 4, start, end, err));
+        config["out_channels"] = 1;
+        REQUIRE_FALSE(WeightScaler::tryGetHeadWeightIndices("ConvNet", config, 20, start, end, err));
         REQUIRE_FALSE(err.empty());
     }
 
-    SECTION("WaveNet weights too small") {
+    SECTION("ConvNet missing out_channels") {
         json config = json::object();
-        REQUIRE_FALSE(WeightScaler::tryGetHeadWeightIndices("WaveNet", config, 9, start, end, err));
+        config["channels"] = 8;
+        REQUIRE_FALSE(WeightScaler::tryGetHeadWeightIndices("ConvNet", config, 20, start, end, err));
         REQUIRE_FALSE(err.empty());
     }
+
+    SECTION("ConvNet head size larger than weights") {
+        json config;
+        config["channels"] = 8;
+        config["out_channels"] = 1;
+        // head size = 9, weights = 5
+        REQUIRE_FALSE(WeightScaler::tryGetHeadWeightIndices("ConvNet", config, 5, start, end, err));
+        REQUIRE_FALSE(err.empty());
+    }
+
 
     SECTION("unsupported architecture") {
         json config = json::object();
@@ -188,12 +203,15 @@ TEST_CASE("MetadataUpdater updates gain metadata") {
     }
 }
 
-TEST_CASE("WaveNet head_scale scaling") {
-    SECTION("scales head_scale by factor") {
-        auto j = makeNamJson("0.7.0", "WaveNet");
-        float original = j["config"]["head_scale"];
-        float factor = 2.0f;
-        j["config"]["head_scale"] = original * factor;
-        REQUIRE(j["config"]["head_scale"] == Catch::Approx(original * factor));
+TEST_CASE("WaveNet scales last weight (head_scale in weights array)") {
+    SECTION("last weight is scaled, others unchanged") {
+        std::vector<float> w = {0.1f, 0.2f, 0.3f, 0.02f};
+        json config = json::object();
+        auto [start, end] = WeightScaler::getHeadWeightIndices("WaveNet", config, w.size());
+        WeightScaler::scaleWeights(w, start, end, 2.0f);
+        REQUIRE(w[0] == Catch::Approx(0.1f));
+        REQUIRE(w[1] == Catch::Approx(0.2f));
+        REQUIRE(w[2] == Catch::Approx(0.3f));
+        REQUIRE(w[3] == Catch::Approx(0.04f));
     }
 }

@@ -27,21 +27,32 @@ bool WeightScaler::tryGetHeadWeightIndices(const std::string& arch, const nlohma
     }
 
     if (arch == "WaveNet") {
-        if (weightsSize < 10) {
-            error = "Weights array too small for WaveNet placeholder logic.";
-            return false;
-        }
-        start = weightsSize - 10;
+        start = weightsSize - 1;
         end = weightsSize;
         return true;
     }
 
     if (arch == "ConvNet") {
-        if (weightsSize < 5) {
-            error = "Weights array too small for ConvNet placeholder logic.";
+        if (!config.contains("channels") || !config["channels"].is_number_integer()) {
+            error = "Missing or invalid config.channels for ConvNet.";
             return false;
         }
-        start = weightsSize - 5;
+        if (!config.contains("out_channels") || !config["out_channels"].is_number_integer()) {
+            error = "Missing or invalid config.out_channels for ConvNet.";
+            return false;
+        }
+        const int channels = config["channels"].get<int>();
+        const int outChannels = config["out_channels"].get<int>();
+        if (channels <= 0 || outChannels <= 0) {
+            error = "config.channels and config.out_channels must be > 0 for ConvNet.";
+            return false;
+        }
+        const size_t headSize = static_cast<size_t>(channels * outChannels + outChannels);
+        if (headSize > weightsSize) {
+            error = "ConvNet head size is larger than weights array.";
+            return false;
+        }
+        start = weightsSize - headSize;
         end = weightsSize;
         return true;
     }
