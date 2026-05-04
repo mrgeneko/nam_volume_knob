@@ -261,14 +261,21 @@ CliRunResult CliHandler::run(const CliArgs& args) {
                 auto jOut = j;
 
                 std::string arch = jOut["architecture"];
-                auto config = jOut["config"];
-                auto weightsVec = jOut["weights"].get<std::vector<float>>();
-                size_t weightsSize = weightsVec.size();
-                auto [start, end] = WeightScaler::getHeadWeightIndices(arch, config, weightsSize);
-
                 float factor = args.useDb ? std::pow(10.0f, gain / 20.0f) : gain;
-                WeightScaler::scaleWeights(weightsVec, start, end, factor);
-                jOut["weights"] = weightsVec;
+
+                // WaveNet uses head_scale in config; scale it directly instead of weights
+                if (arch == "WaveNet") {
+                    if (jOut["config"].contains("head_scale") && jOut["config"]["head_scale"].is_number()) {
+                        jOut["config"]["head_scale"] = jOut["config"]["head_scale"].get<float>() * factor;
+                    }
+                } else {
+                    auto config = jOut["config"];
+                    auto weightsVec = jOut["weights"].get<std::vector<float>>();
+                    size_t weightsSize = weightsVec.size();
+                    auto [start, end] = WeightScaler::getHeadWeightIndices(arch, config, weightsSize);
+                    WeightScaler::scaleWeights(weightsVec, start, end, factor);
+                    jOut["weights"] = weightsVec;
+                }
 
                 float gainDbForMetadata = args.useDb ? gain : 20.0f * std::log10(gain);
                 MetadataUpdater::updateMetadata(jOut["metadata"], gainDbForMetadata);

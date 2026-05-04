@@ -9,6 +9,30 @@ const results = document.getElementById('results');
 
 const MAX_GAIN_DB = 9;
 
+// Check if Wasm module is ready
+let moduleReady = false;
+function checkModuleReady() {
+    if (window.namModuleReady) {
+        moduleReady = true;
+        return true;
+    }
+    if (typeof Module !== 'undefined' && typeof Module.processNam === 'function') {
+        moduleReady = true;
+        return true;
+    }
+    return false;
+}
+
+// Check module readiness periodically
+const moduleCheckInterval = setInterval(() => {
+    if (checkModuleReady()) {
+        clearInterval(moduleCheckInterval);
+        console.log('NAM module is ready');
+    }
+}, 100);
+// Stop checking after 10 seconds
+setTimeout(() => clearInterval(moduleCheckInterval), 10000);
+
 let files = [];
 
 function setFilesFromList(fileList) {
@@ -127,6 +151,7 @@ fileInput.addEventListener('change', (e) => {
     setFilesFromList(e.target.files);
 });
 
+
 processBtn.addEventListener('click', async () => {
     let gains;
     try {
@@ -165,6 +190,10 @@ processBtn.addEventListener('click', async () => {
     results.classList.remove('error');
     if (!files.length) {
         showStatus('Drop one or more .nam files first.');
+        return;
+    }
+    if (!moduleReady && !checkModuleReady()) {
+        showError('Error: Module not ready. Please wait for page to load completely.');
         return;
     }
     showStatus(`Processing ${files.length} file(s) × ${gains.length} gain(s)…`);
