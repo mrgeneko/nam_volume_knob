@@ -36,25 +36,33 @@ std::string processNam(const std::string& jsonStr, float factor, float gainDb) {
         return "Error: Missing or invalid weights field.";
     }
 
-    // Convert weights to float vector safely (no exceptions).
-    std::vector<float> weightsVec;
-    weightsVec.reserve(j["weights"].size());
-    for (const auto& w : j["weights"]) {
-        if (!w.is_number()) {
-            return "Error: Weights array contains non-numeric value(s).";
+    // Handle A2 (SlimmableContainer) models differently from flat architectures
+    if (arch == "SlimmableContainer") {
+        std::string err;
+        if (!WeightScaler::tryScaleA2Model(j, factor, err)) {
+            return "Error: " + err;
         }
-        weightsVec.push_back(static_cast<float>(w.get<double>()));
-    }
+    } else {
+        // Convert weights to float vector safely (no exceptions).
+        std::vector<float> weightsVec;
+        weightsVec.reserve(j["weights"].size());
+        for (const auto& w : j["weights"]) {
+            if (!w.is_number()) {
+                return "Error: Weights array contains non-numeric value(s).";
+            }
+            weightsVec.push_back(static_cast<float>(w.get<double>()));
+        }
 
-    size_t start = 0;
-    size_t end = 0;
-    std::string err;
-    if (!WeightScaler::tryGetHeadWeightIndices(arch, config, weightsVec.size(), start, end, err)) {
-        return "Error: " + err;
-    }
+        size_t start = 0;
+        size_t end = 0;
+        std::string err;
+        if (!WeightScaler::tryGetHeadWeightIndices(arch, config, weightsVec.size(), start, end, err)) {
+            return "Error: " + err;
+        }
 
-    WeightScaler::scaleWeights(weightsVec, start, end, factor);
-    j["weights"] = weightsVec;
+        WeightScaler::scaleWeights(weightsVec, start, end, factor);
+        j["weights"] = weightsVec;
+    }
 
     if (j.contains("metadata") && j["metadata"].is_object()) {
         MetadataUpdater::updateMetadata(j["metadata"], gainDb);

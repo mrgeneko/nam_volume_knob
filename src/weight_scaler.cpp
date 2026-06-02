@@ -63,6 +63,11 @@ bool WeightScaler::tryGetHeadWeightIndices(const std::string& arch, const nlohma
         return true;
     }
 
+    if (arch == "SlimmableContainer") {
+        error = "SlimmableContainer (A2) cannot be scaled directly. Use scaleA2Model() instead.";
+        return false;
+    }
+
     error = "Unsupported architecture: " + arch;
     return false;
 }
@@ -80,5 +85,65 @@ std::pair<size_t, size_t> WeightScaler::getHeadWeightIndices(const std::string& 
 void WeightScaler::scaleWeights(std::vector<float>& weights, size_t start, size_t end, float factor) {
     for (size_t i = start; i < end; ++i) {
         weights[i] *= factor;
+    }
+}
+
+bool WeightScaler::tryScaleA2Model(nlohmann::json& model, float factor, std::string& error) {
+    if (!model.contains("architecture") || !model["architecture"].is_string()) {
+        error = "Missing or invalid architecture field in model.";
+        return false;
+    }
+
+    std::string arch = model["architecture"].get<std::string>();
+
+    if (arch == "SlimmableContainer") {
+        if (!model.contains("config") || !model["config"].is_object()) {
+            error = "SlimmableContainer missing or invalid config.";
+            return false;
+        }
+        if (!model["config"].contains("submodels") || !model["config"]["submodels"].is_array()) {
+            error = "SlimmableContainer config missing or invalid submodels array.";
+            return false;
+        }
+
+        for (auto& submodel_entry : model["config"]["submodels"]) {
+            if (!submodel_entry.contains("model") || !submodel_entry["model"].is_object()) {
+                error = "SlimmableContainer submodel entry missing or invalid model field.";
+                return false;
+            }
+
+            if (!tryScaleA2Model(submodel_entry["model"], factor, error)) {
+                return false;
+            }
+        }
+        return true;
+    } else {
+        // For non-container models (WaveNet, LSTM, ConvNet, Linear), scale the weights directly
+        if (!model.contains("weights") || !model["weights"].is_array()) {
+            error = "Model missing or invalid weights array.";
+            return false;
+        }
+
+        std::vector<float> weights = model["weights"].get<std::vector<float>>();
+        if (!model.contains("config") || !model["config"].is_object()) {
+            error = "Model missing or invalid config.";
+            return false;
+        }
+
+        size_t start, end;
+        if (!tryGetHeadWeightIndices(arch, model["config"], weights.size(), start, end, error)) {
+            return false;
+        }
+
+        scaleWeights(weights, start, end, factor);
+        model["weights"] = weights;
+        return true;
+    }
+}
+
+void WeightScaler::scaleA2Model(nlohmann::json& model, float factor) {
+    std::string error;
+    if (!tryScaleA2Model(model, factor, error)) {
+        throw std::runtime_error(error);
     }
 }

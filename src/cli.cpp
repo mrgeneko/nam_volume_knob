@@ -263,12 +263,17 @@ CliRunResult CliHandler::run(const CliArgs& args) {
                 std::string arch = jOut["architecture"];
                 float factor = args.useDb ? std::pow(10.0f, gain / 20.0f) : gain;
 
-                auto config = jOut["config"];
-                auto weightsVec = jOut["weights"].get<std::vector<float>>();
-                size_t weightsSize = weightsVec.size();
-                auto [start, end] = WeightScaler::getHeadWeightIndices(arch, config, weightsSize);
-                WeightScaler::scaleWeights(weightsVec, start, end, factor);
-                jOut["weights"] = weightsVec;
+                // Handle A2 (SlimmableContainer) models differently from flat architectures
+                if (arch == "SlimmableContainer") {
+                    WeightScaler::scaleA2Model(jOut, factor);
+                } else {
+                    auto config = jOut["config"];
+                    auto weightsVec = jOut["weights"].get<std::vector<float>>();
+                    size_t weightsSize = weightsVec.size();
+                    auto [start, end] = WeightScaler::getHeadWeightIndices(arch, config, weightsSize);
+                    WeightScaler::scaleWeights(weightsVec, start, end, factor);
+                    jOut["weights"] = weightsVec;
+                }
 
                 float gainDbForMetadata = args.useDb ? gain : 20.0f * std::log10(gain);
                 MetadataUpdater::updateMetadata(jOut["metadata"], gainDbForMetadata);

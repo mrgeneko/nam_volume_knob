@@ -215,3 +215,57 @@ TEST_CASE("WaveNet scales last weight (head_scale in weights array)") {
         REQUIRE(w[3] == Catch::Approx(0.04f));
     }
 }
+
+TEST_CASE("A2 (SlimmableContainer) weight scaling") {
+    SECTION("scales submodels recursively") {
+        json model;
+        model["architecture"] = "SlimmableContainer";
+        model["config"]["submodels"] = json::array();
+
+        // Add first submodel (WaveNet)
+        json submodel1;
+        submodel1["max_value"] = 0.5f;
+        submodel1["model"]["architecture"] = "WaveNet";
+        submodel1["model"]["config"] = json::object();
+        submodel1["model"]["weights"] = {0.1f, 0.2f, 0.02f};
+        model["config"]["submodels"].push_back(submodel1);
+
+        // Add second submodel (WaveNet)
+        json submodel2;
+        submodel2["max_value"] = 1.0f;
+        submodel2["model"]["architecture"] = "WaveNet";
+        submodel2["model"]["config"] = json::object();
+        submodel2["model"]["weights"] = {0.3f, 0.4f, 0.03f};
+        model["config"]["submodels"].push_back(submodel2);
+
+        // Scale by factor 2.0
+        WeightScaler::scaleA2Model(model, 2.0f);
+
+        // Verify first submodel (last weight scaled)
+        REQUIRE(model["config"]["submodels"][0]["model"]["weights"][0] == Catch::Approx(0.1f));
+        REQUIRE(model["config"]["submodels"][0]["model"]["weights"][1] == Catch::Approx(0.2f));
+        REQUIRE(model["config"]["submodels"][0]["model"]["weights"][2] == Catch::Approx(0.04f));
+
+        // Verify second submodel (last weight scaled)
+        REQUIRE(model["config"]["submodels"][1]["model"]["weights"][0] == Catch::Approx(0.3f));
+        REQUIRE(model["config"]["submodels"][1]["model"]["weights"][1] == Catch::Approx(0.4f));
+        REQUIRE(model["config"]["submodels"][1]["model"]["weights"][2] == Catch::Approx(0.06f));
+    }
+
+    SECTION("tryScaleA2Model returns false for invalid input") {
+        json model;
+        model["architecture"] = "SlimmableContainer";
+        // Missing config
+        std::string err;
+        REQUIRE_FALSE(WeightScaler::tryScaleA2Model(model, 2.0f, err));
+        REQUIRE_FALSE(err.empty());
+    }
+
+    SECTION("SlimmableContainer in tryGetHeadWeightIndices returns error") {
+        json config = json::object();
+        size_t start, end;
+        std::string err;
+        REQUIRE_FALSE(WeightScaler::tryGetHeadWeightIndices("SlimmableContainer", config, 10, start, end, err));
+        REQUIRE(err.find("SlimmableContainer") != std::string::npos);
+    }
+}

@@ -203,12 +203,27 @@ processBtn.addEventListener('click', async () => {
     const shouldZip = totalOutputs > 1 && typeof window.fflate !== 'undefined';
     const zipEntries = shouldZip ? {} : null;
     let successCount = 0;
+    let a1Count = 0;
+    let a2Count = 0;
+    const namVersions = new Set();
 
     for (const file of files) {
         try {
             const text = await file.text();
             const json = JSON.parse(text);
             const base = file.name.replace('.nam', '');
+
+            // Count model versions and collect NAM versions
+            const architecture = typeof json.architecture === 'string' ? json.architecture : 'unknown';
+            if (architecture === 'SlimmableContainer') {
+                a2Count++;
+            } else {
+                a1Count++;
+            }
+
+            const namVersion = typeof json.version === 'string' ? json.version : 'unknown';
+            namVersions.add(namVersion);
+
             for (const gainValue of gains) {
                 const factor = Math.pow(10, gainValue / 20);
                 const gainDbForMetadata = gainValue;
@@ -242,13 +257,17 @@ processBtn.addEventListener('click', async () => {
 
                 successCount++;
 
-                // Track each export with gain level
+                // Track each export with gain level and model version
                 if (typeof gtag === 'function') {
+                    const architecture = typeof json.architecture === 'string' ? json.architecture : 'unknown';
+                    const modelVersion = architecture === 'SlimmableContainer' ? 'A2' : 'A1';
                     gtag('event', 'nam_export', {
                         'gain_value': gainValue,
                         'gain_type': 'db',
                         'file_name': file.name,
-                        'nam_version': typeof json.version === 'string' ? json.version : 'unknown'
+                        'nam_version': typeof json.version === 'string' ? json.version : 'unknown',
+                        'model_version': modelVersion,
+                        'architecture': architecture
                     });
                 }
             }
@@ -285,7 +304,11 @@ processBtn.addEventListener('click', async () => {
             'gain_count': gains.length,
             'total_exports': successCount,
             'gain_type': 'db',
-            'gain_levels': gains.join(',')
+            'gain_levels': gains.join(','),
+            'a1_model_count': a1Count,
+            'a2_model_count': a2Count,
+            'a2_adoption_pct': files.length > 0 ? Math.round((a2Count / files.length) * 100) : 0,
+            'nam_versions': Array.from(namVersions).join(',')
         });
     }
 
