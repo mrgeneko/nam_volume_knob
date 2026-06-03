@@ -1,5 +1,6 @@
 #include "weight_scaler.h"
 #include <stdexcept>
+#include <cmath>
 
 bool WeightScaler::tryGetHeadWeightIndices(const std::string& arch, const nlohmann::json& config, size_t weightsSize, size_t& start, size_t& end, std::string& error) {
     if (weightsSize == 0) {
@@ -144,6 +145,21 @@ bool WeightScaler::tryScaleA2Model(nlohmann::json& model, float factor, std::str
                 float head_scale = model["config"]["head_scale"].get<float>();
                 model["config"]["head_scale"] = head_scale * factor;
             }
+        }
+
+        // Scale loudness metadata so normalization doesn't negate the weight changes.
+        // Loudness is in dB; factor of 2.0 = +6dB, so we add 20*log10(factor) to loudness.
+        float dbGain = 20.0f * std::log10(factor);
+        if (model["metadata"].contains("loudness") && model["metadata"]["loudness"].is_number()) {
+            float loudness = model["metadata"]["loudness"].get<float>();
+            model["metadata"]["loudness"] = loudness + dbGain;
+        }
+        if (model["config"].contains("output_level") && model["config"]["output_level"].is_number()) {
+            float output_level = model["config"]["output_level"].get<float>();
+            model["config"]["output_level"] = output_level + dbGain;
+        }
+        if (model["config"].contains("input_level") && model["config"]["input_level"].is_number()) {
+            // Input level is not affected by output weight scaling, so don't modify it.
         }
 
         return true;
