@@ -264,31 +264,42 @@ CliRunResult CliHandler::run(const CliArgs& args) {
 
                 // Handle A2 (SlimmableContainer) models differently from flat architectures
                 if (arch == "SlimmableContainer") {
-                    WeightScaler::scaleA2Model(jOut, factor);
-                } else {
-                    // A1 models: scale weights
-                    auto config = jOut["config"];
-                    auto weightsVec = jOut["weights"].get<std::vector<float>>();
-                    size_t weightsSize = weightsVec.size();
-                    auto [start, end] = WeightScaler::getHeadWeightIndices(arch, config, weightsSize);
-                    WeightScaler::scaleWeights(weightsVec, start, end, factor);
-                    jOut["weights"] = weightsVec;
-
-                    // Update metadata to reflect the scaling (prevents host normalization from undoing it)
-                    float dbGain = args.useDb ? gain : 20.0f * std::log10(gain);
-                    if (jOut.contains("metadata") && jOut["metadata"].is_object()) {
-                        if (jOut["metadata"].contains("loudness") && jOut["metadata"]["loudness"].is_number()) {
-                            float loudness = jOut["metadata"]["loudness"].get<float>();
-                            jOut["metadata"]["loudness"] = loudness + dbGain;
-                        }
-                        if (jOut["metadata"].contains("gain") && jOut["metadata"]["gain"].is_number()) {
-                            float gain_val = jOut["metadata"]["gain"].get<float>();
-                            jOut["metadata"]["gain"] = gain_val + dbGain;
-                        }
+                    std::string err;
+                    if (!WeightScaler::tryScaleA2Model(jOut, factor, err)) {
+                        result.exitCode = 3;
+                        result.error = "Error: Failed to scale A2 model: " + err;
+                        return result;
                     }
-                    if (jOut["config"].contains("output_level") && jOut["config"]["output_level"].is_number()) {
-                        float output_level = jOut["config"]["output_level"].get<float>();
-                        jOut["config"]["output_level"] = output_level + dbGain;
+                } else {
+                    // A1 models: scale weights with consistent error handling
+                    try {
+                        auto config = jOut["config"];
+                        auto weightsVec = jOut["weights"].get<std::vector<float>>();
+                        size_t weightsSize = weightsVec.size();
+                        auto [start, end] = WeightScaler::getHeadWeightIndices(arch, config, weightsSize);
+                        WeightScaler::scaleWeights(weightsVec, start, end, factor);
+                        jOut["weights"] = weightsVec;
+
+                        // Update metadata to reflect the scaling (prevents host normalization from undoing it)
+                        float dbGain = args.useDb ? gain : 20.0f * std::log10(gain);
+                        if (jOut.contains("metadata") && jOut["metadata"].is_object()) {
+                            if (jOut["metadata"].contains("loudness") && jOut["metadata"]["loudness"].is_number()) {
+                                float loudness = jOut["metadata"]["loudness"].get<float>();
+                                jOut["metadata"]["loudness"] = loudness + dbGain;
+                            }
+                            if (jOut["metadata"].contains("gain") && jOut["metadata"]["gain"].is_number()) {
+                                float gain_val = jOut["metadata"]["gain"].get<float>();
+                                jOut["metadata"]["gain"] = gain_val + dbGain;
+                            }
+                        }
+                        if (jOut.contains("config") && jOut["config"].is_object() && jOut["config"].contains("output_level") && jOut["config"]["output_level"].is_number()) {
+                            float output_level = jOut["config"]["output_level"].get<float>();
+                            jOut["config"]["output_level"] = output_level + dbGain;
+                        }
+                    } catch (const std::exception& e) {
+                        result.exitCode = 3;
+                        result.error = "Error: Failed to scale A1 model: " + std::string(e.what());
+                        return result;
                     }
                 }
 

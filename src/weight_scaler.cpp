@@ -130,7 +130,7 @@ bool WeightScaler::tryScaleA2Model(nlohmann::json& model, float factor, std::str
                 model["metadata"]["gain"] = gain + dbGain;
             }
         }
-        if (model.contains("config") && model["config"].contains("output_level") && model["config"]["output_level"].is_number()) {
+        if (model.contains("config") && model["config"].is_object() && model["config"].contains("output_level") && model["config"]["output_level"].is_number()) {
             float output_level = model["config"]["output_level"].get<float>();
             model["config"]["output_level"] = output_level + dbGain;
         }
@@ -162,16 +162,19 @@ bool WeightScaler::tryScaleA2Model(nlohmann::json& model, float factor, std::str
         // Scale loudness metadata so normalization doesn't negate the weight changes.
         // Loudness is in dB; factor of 2.0 = +6dB, so we add 20*log10(factor) to loudness.
         float dbGain = 20.0f * std::log10(factor);
-        if (model["metadata"].contains("loudness") && model["metadata"]["loudness"].is_number()) {
-            float loudness = model["metadata"]["loudness"].get<float>();
-            model["metadata"]["loudness"] = loudness + dbGain;
+        if (model.contains("metadata") && model["metadata"].is_object()) {
+            if (model["metadata"].contains("loudness") && model["metadata"]["loudness"].is_number()) {
+                float loudness = model["metadata"]["loudness"].get<float>();
+                model["metadata"]["loudness"] = loudness + dbGain;
+            }
+            if (model["metadata"].contains("gain") && model["metadata"]["gain"].is_number()) {
+                float gain = model["metadata"]["gain"].get<float>();
+                model["metadata"]["gain"] = gain + dbGain;
+            }
         }
-        if (model["config"].contains("output_level") && model["config"]["output_level"].is_number()) {
+        if (model.contains("config") && model["config"].is_object() && model["config"].contains("output_level") && model["config"]["output_level"].is_number()) {
             float output_level = model["config"]["output_level"].get<float>();
             model["config"]["output_level"] = output_level + dbGain;
-        }
-        if (model["config"].contains("input_level") && model["config"]["input_level"].is_number()) {
-            // Input level is not affected by output weight scaling, so don't modify it.
         }
 
         return true;

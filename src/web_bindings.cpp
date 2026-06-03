@@ -18,22 +18,12 @@ std::string processNam(const std::string& jsonStr, float factor, float gainDb) {
     }
 
     if (!Validator::validateNam(j)) {
-        return "Error: Invalid .nam file.";
+        return "Error: Invalid .nam file format (missing required fields or corrupted).";
     }
 
-    if (!j.contains("architecture") || !j["architecture"].is_string()) {
-        return "Error: Missing or invalid architecture field.";
-    }
+    // Validation passed; extract guaranteed-safe fields
     const std::string arch = j["architecture"].get<std::string>();
-
-    if (!j.contains("config") || !j["config"].is_object()) {
-        return "Error: Missing or invalid config field.";
-    }
     const auto& config = j["config"];
-
-    if (!j.contains("weights") || !j["weights"].is_array()) {
-        return "Error: Missing or invalid weights field.";
-    }
 
     // Handle A2 (SlimmableContainer) models differently from flat architectures
     if (arch == "SlimmableContainer") {
