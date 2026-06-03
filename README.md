@@ -66,8 +66,8 @@ Then open the printed URL in a modern browser.
 
 The web version uses Google Analytics 4 to track usage and errors. Data collected includes:
 
-- **Processing Events**: Model architecture (A1/A2), NAM version, gain levels, success/failure
-- **Error Events**: Error type, error message, and affected file names
+- **Processing Events**: File names processed, model architecture (A1/A2), NAM version, gain levels applied
+- **Error Events**: Error type, error message, file names
 - **Batch Summaries**: Number of files processed, A1 vs A2 distribution
 - **Standard Analytics**: Page views, browser type, device type
 
