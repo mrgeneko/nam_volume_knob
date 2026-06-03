@@ -304,6 +304,62 @@ TEST_CASE("WaveNet scales last weight (head_scale in weights array)") {
     }
 }
 
+TEST_CASE("A2 (SlimmableContainer) validation") {
+    SECTION("accepts valid A2 model with submodels") {
+        auto model = makeNamJson("0.7.0");
+        model["architecture"] = "SlimmableContainer";
+        model["config"] = json::object();
+
+        json submodel1;
+        submodel1["max_value"] = 0.5f;
+        submodel1["model"]["version"] = "0.5.0";
+        submodel1["model"]["architecture"] = "WaveNet";
+        submodel1["model"]["config"] = json::object();
+        submodel1["model"]["weights"] = {0.1f, 0.2f, 0.02f};
+        model["config"]["submodels"] = json::array();
+        model["config"]["submodels"].push_back(submodel1);
+
+        model.erase("weights");  // A2 models don't have top-level weights
+        REQUIRE(Validator::validateNam(model) == true);
+    }
+
+    SECTION("rejects A2 model without submodels") {
+        auto model = makeNamJson("0.7.0");
+        model["architecture"] = "SlimmableContainer";
+        model["config"]["submodels"] = json::array();  // Empty array
+        model.erase("weights");
+        REQUIRE(Validator::validateNam(model) == false);
+    }
+
+    SECTION("rejects A2 model with invalid submodel (missing model field)") {
+        auto model = makeNamJson("0.7.0");
+        model["architecture"] = "SlimmableContainer";
+        model["config"]["submodels"] = json::array();
+
+        json invalid_submodel;
+        invalid_submodel["max_value"] = 0.5f;
+        // Missing "model" field
+        model["config"]["submodels"].push_back(invalid_submodel);
+        model.erase("weights");
+        REQUIRE(Validator::validateNam(model) == false);
+    }
+
+    SECTION("rejects A2 model with submodel missing weights") {
+        auto model = makeNamJson("0.7.0");
+        model["architecture"] = "SlimmableContainer";
+        model["config"]["submodels"] = json::array();
+
+        json submodel1;
+        submodel1["max_value"] = 0.5f;
+        submodel1["model"]["architecture"] = "WaveNet";
+        submodel1["model"]["config"] = json::object();
+        // Missing weights
+        model["config"]["submodels"].push_back(submodel1);
+        model.erase("weights");
+        REQUIRE(Validator::validateNam(model) == false);
+    }
+}
+
 TEST_CASE("A2 (SlimmableContainer) weight scaling") {
     SECTION("scales submodels recursively") {
         json model;
