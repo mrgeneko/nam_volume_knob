@@ -5,18 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>NAM Volume Knob</title>
-    <!-- Google Analytics 4 (only loads on production) -->
+    <!-- Google Analytics 4 -->
     <script>
-        if (window.location.hostname === 'mrgeneko.github.io') {
-            var s = document.createElement('script');
-            s.async = true;
-            s.src = 'https://www.googletagmanager.com/gtag/js?id=G-PJXPNYRJPG';
-            document.head.appendChild(s);
-            window.dataLayer = window.dataLayer || [];
-            function gtag() { dataLayer.push(arguments); }
-            gtag('js', new Date());
-            gtag('config', 'G-PJXPNYRJPG');
-        }
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-PJXPNYRJPG';
+        document.head.appendChild(s);
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-PJXPNYRJPG');
     </script>
     <link rel="icon" type="image/svg+xml"
         href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%3E%3Ctext%20y='.9em'%20font-size='90'%3E%F0%9F%8E%B8%3C/text%3E%3C/svg%3E">
@@ -58,10 +56,32 @@
     <div id="footer">
         <a href="https://github.com/mrgeneko/nam_volume_knob/blob/main/README.md" target="_blank"
             rel="noopener noreferrer">learn more</a>
+        <span style="margin: 0 10px;">•</span>
+        <a href="#" onclick="toggleAnalyticsDisclosure(event)" style="text-decoration: underline;">analytics & privacy</a>
+    </div>
+    <div id="analytics-disclosure" style="display: none; margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; font-size: 12px; line-height: 1.6; color: #666;">
+        <h3 style="margin-top: 0; color: #333;">Analytics Disclosure</h3>
+        <p>This app uses Google Analytics 4 to track usage and errors. The following data is collected:</p>
+        <ul style="margin: 10px 0;">
+            <li><strong>Processing Events:</strong> Model architecture (A1/A2), NAM version, gain levels applied, file names</li>
+            <li><strong>Error Events:</strong> Error type, error message, file name that caused the error</li>
+            <li><strong>Batch Summaries:</strong> Number of files processed, number of gains applied, A1 vs A2 model distribution</li>
+            <li><strong>Standard Analytics:</strong> Page views, browser type, device type, geographic location (from IP)</li>
+        </ul>
+        <p><strong>What is NOT collected:</strong> Audio data, model weights, file contents, personal information</p>
+        <p>If you deploy this tool to your own URL, update the tracking ID in <code>index.html</code> (line 12) to send analytics to your own Google Analytics property instead of the original author's.</p>
+        <p><a href="https://support.google.com/analytics/answer/12080356" target="_blank" rel="noopener noreferrer">Learn more about Google Analytics</a></p>
     </div>
     <small>Vibed by Gene Ko</small>
     <script src="vendor/fflate-0.8.2-umd.js"></script>
     <script src="app.js"></script>
+    <script>
+        function toggleAnalyticsDisclosure(e) {
+            e.preventDefault();
+            const disclosure = document.getElementById('analytics-disclosure');
+            disclosure.style.display = disclosure.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
 </body>
 
 </html>

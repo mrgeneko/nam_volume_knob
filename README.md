@@ -62,6 +62,21 @@ python3 web/serve_local.py
 
 Then open the printed URL in a modern browser.
 
+#### Analytics & Privacy
+
+The web version uses Google Analytics 4 to track usage and errors. Data collected includes:
+
+- **Processing Events**: Model architecture (A1/A2), NAM version, gain levels, success/failure
+- **Error Events**: Error type, error message, and affected file names
+- **Batch Summaries**: Number of files processed, A1 vs A2 distribution
+- **Standard Analytics**: Page views, browser type, device type
+
+**What is NOT collected**: Audio data, model weights, file contents, personal information.
+
+**Custom Deployments**: If you deploy to your own domain, update the tracking ID in `web/index.html` (line 12) to send analytics to your own Google Analytics property instead of the original author's. This allows you to track your own deployment's usage.
+
+A privacy disclosure is available on the web interface under "analytics & privacy" in the footer.
+
 ## Usage
 
 ### CLI
