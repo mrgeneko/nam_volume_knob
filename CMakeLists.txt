@@ -51,7 +51,9 @@ endif()
 # Audio processing test
 option(NAM_VOLUME_KNOB_BUILD_AUDIO_TEST "Build audio processing test using NeuralAmpModelerCore" OFF)
 if(NAM_VOLUME_KNOB_BUILD_AUDIO_TEST)
-    file(GLOB NAM_CORE_SOURCES "third_party/NeuralAmpModelerCore/NAM/*.cpp")
+    file(GLOB NAM_CORE_SOURCES
+        "third_party/NeuralAmpModelerCore/NAM/*.cpp"
+        "third_party/NeuralAmpModelerCore/NAM/wavenet/*.cpp")
     add_executable(audio_test tests/audio_test.cpp ${NAM_CORE_SOURCES})
     target_link_libraries(audio_test Eigen3::Eigen)
     target_include_directories(audio_test PRIVATE
