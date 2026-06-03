@@ -1,7 +1,6 @@
 #include <emscripten/bind.h>
 #include "nam_parser.h"
 #include "weight_scaler.h"
-#include "metadata_updater.h"
 #include "validator.h"
 #include <iostream>
 #include <cmath>
@@ -62,10 +61,22 @@ std::string processNam(const std::string& jsonStr, float factor, float gainDb) {
 
         WeightScaler::scaleWeights(weightsVec, start, end, factor);
         j["weights"] = weightsVec;
-    }
 
-    if (j.contains("metadata") && j["metadata"].is_object()) {
-        MetadataUpdater::updateMetadata(j["metadata"], gainDb);
+        // Update metadata to reflect the scaling (prevents host normalization from undoing it)
+        if (j.contains("metadata") && j["metadata"].is_object()) {
+            if (j["metadata"].contains("loudness") && j["metadata"]["loudness"].is_number()) {
+                float loudness = j["metadata"]["loudness"].get<float>();
+                j["metadata"]["loudness"] = loudness + gainDb;
+            }
+            if (j["metadata"].contains("gain") && j["metadata"]["gain"].is_number()) {
+                float gain_val = j["metadata"]["gain"].get<float>();
+                j["metadata"]["gain"] = gain_val + gainDb;
+            }
+        }
+        if (j["config"].contains("output_level") && j["config"]["output_level"].is_number()) {
+            float output_level = j["config"]["output_level"].get<float>();
+            j["config"]["output_level"] = output_level + gainDb;
+        }
     }
 
     return j.dump(4);

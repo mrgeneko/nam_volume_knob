@@ -16,7 +16,6 @@ find_package(Eigen3 REQUIRED)
 set(SOURCES
     src/nam_parser.cpp
     src/weight_scaler.cpp
-    src/metadata_updater.cpp
     src/validator.cpp
     src/cli.cpp
 )

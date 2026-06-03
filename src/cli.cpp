@@ -1,7 +1,6 @@
 #include "cli.h"
 #include "nam_parser.h"
 #include "weight_scaler.h"
-#include "metadata_updater.h"
 #include "validator.h"
 #include <iostream>
 #include <fstream>
@@ -267,16 +266,31 @@ CliRunResult CliHandler::run(const CliArgs& args) {
                 if (arch == "SlimmableContainer") {
                     WeightScaler::scaleA2Model(jOut, factor);
                 } else {
+                    // A1 models: scale weights
                     auto config = jOut["config"];
                     auto weightsVec = jOut["weights"].get<std::vector<float>>();
                     size_t weightsSize = weightsVec.size();
                     auto [start, end] = WeightScaler::getHeadWeightIndices(arch, config, weightsSize);
                     WeightScaler::scaleWeights(weightsVec, start, end, factor);
                     jOut["weights"] = weightsVec;
-                }
 
-                float gainDbForMetadata = args.useDb ? gain : 20.0f * std::log10(gain);
-                MetadataUpdater::updateMetadata(jOut["metadata"], gainDbForMetadata);
+                    // Update metadata to reflect the scaling (prevents host normalization from undoing it)
+                    float dbGain = args.useDb ? gain : 20.0f * std::log10(gain);
+                    if (jOut.contains("metadata") && jOut["metadata"].is_object()) {
+                        if (jOut["metadata"].contains("loudness") && jOut["metadata"]["loudness"].is_number()) {
+                            float loudness = jOut["metadata"]["loudness"].get<float>();
+                            jOut["metadata"]["loudness"] = loudness + dbGain;
+                        }
+                        if (jOut["metadata"].contains("gain") && jOut["metadata"]["gain"].is_number()) {
+                            float gain_val = jOut["metadata"]["gain"].get<float>();
+                            jOut["metadata"]["gain"] = gain_val + dbGain;
+                        }
+                    }
+                    if (jOut["config"].contains("output_level") && jOut["config"]["output_level"].is_number()) {
+                        float output_level = jOut["config"]["output_level"].get<float>();
+                        jOut["config"]["output_level"] = output_level + dbGain;
+                    }
+                }
 
                 std::string outputPath;
                 if (!args.outputPath.empty()) {
@@ -310,16 +324,45 @@ CliRunResult CliHandler::run(const CliArgs& args) {
                     version++;
                 }
 
-                std::ofstream out(finalPath);
-                if (!out.is_open()) {
-                    result.exitCode = 4;
-                    result.error = "Error: Failed to open output file for writing: " + finalPath;
-                    return result;
+                // Write to temporary file first, then move to final location on success
+                std::string tempPath = finalPath + ".tmp";
+                {
+                    std::ofstream out(tempPath);
+                    if (!out.is_open()) {
+                        result.exitCode = 4;
+                        result.error = "Error: Failed to open output file for writing: " + finalPath;
+                        return result;
+                    }
+
+                    try {
+                        std::string jsonStr = jOut.dump(4);
+                        out << jsonStr;
+                    } catch (const std::exception& e) {
+                        out.close();
+                        std::filesystem::remove(tempPath);
+                        result.exitCode = 4;
+                        result.error = "Error: Failed to serialize JSON for " + finalPath + ": " + e.what();
+                        return result;
+                    }
+
+                    out.flush();
+                    if (!out.good()) {
+                        out.close();
+                        std::filesystem::remove(tempPath);
+                        result.exitCode = 4;
+                        result.error = "Error: Failed while writing output file: " + finalPath;
+                        return result;
+                    }
+                    out.close();
                 }
-                out << jOut.dump(4);
-                if (!out.good()) {
+
+                // Move temporary file to final location
+                try {
+                    std::filesystem::rename(tempPath, finalPath);
+                } catch (const std::exception& e) {
+                    std::filesystem::remove(tempPath);
                     result.exitCode = 4;
-                    result.error = "Error: Failed while writing output file: " + finalPath;
+                    result.error = "Error: Failed to save output file: " + finalPath + ": " + e.what();
                     return result;
                 }
 
