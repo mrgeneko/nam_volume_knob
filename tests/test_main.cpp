@@ -1,9 +1,9 @@
 #include <catch2/catch_all.hpp>
 #include "validator.h"
 #include "weight_scaler.h"
-#include "metadata_updater.h"
 #include <vector>
 #include <nlohmann/json.hpp>
+#include <cmath>
 
 using json = nlohmann::json;
 
@@ -21,6 +21,9 @@ json makeNamJson(const std::string& version, const std::string& arch = "Linear")
     } else if (arch == "LSTM") {
         j["config"]["hidden_size"] = 8;
         j["config"]["num_layers"] = 1;
+    } else if (arch == "ConvNet") {
+        j["config"]["channels"] = 8;
+        j["config"]["out_channels"] = 16;
     }
     j["weights"] = {1.0f, 2.0f, 3.0f};
     j["metadata"] = json::object();
@@ -186,20 +189,105 @@ TEST_CASE("WeightScaler scaleWeights") {
     }
 }
 
-TEST_CASE("MetadataUpdater updates gain metadata") {
-    SECTION("updates loudness and output_level_dbu") {
-        json meta;
-        meta["loudness"] = -12.0f;
-        meta["output_level_dbu"] = -12.0f;
-        MetadataUpdater::updateMetadata(meta, 3.0f);
-        REQUIRE(meta["loudness"] == -9.0f);
-        REQUIRE(meta["output_level_dbu"] == -9.0f);
+TEST_CASE("WeightScaler updateMetadata") {
+    SECTION("updates loudness, gain, and output_level fields") {
+        json model;
+        model["metadata"]["loudness"] = -12.0f;
+        model["metadata"]["gain"] = 0.0f;
+        model["config"]["output_level"] = -6.0f;
+
+        WeightScaler::updateMetadata(model, 6.0f);
+
+        REQUIRE(model["metadata"]["loudness"] == Catch::Approx(-6.0f));
+        REQUIRE(model["metadata"]["gain"] == Catch::Approx(6.0f));
+        REQUIRE(model["config"]["output_level"] == Catch::Approx(0.0f));
     }
 
-    SECTION("handles missing metadata fields") {
-        json meta;
-        MetadataUpdater::updateMetadata(meta, 3.0f);
-        REQUIRE(meta.contains("loudness") == false);
+    SECTION("handles missing metadata fields safely") {
+        json model;
+        model["config"]["output_level"] = 0.0f;
+
+        // Should not create metadata field if it doesn't exist
+        WeightScaler::updateMetadata(model, 3.0f);
+        REQUIRE(model["metadata"].is_null());
+        REQUIRE(model["config"]["output_level"] == Catch::Approx(3.0f));
+    }
+
+    SECTION("handles missing config fields safely") {
+        json model;
+        model["metadata"]["loudness"] = 0.0f;
+
+        // Should not throw or create config if it doesn't exist
+        WeightScaler::updateMetadata(model, 3.0f);
+        REQUIRE(model["metadata"]["loudness"] == Catch::Approx(3.0f));
+    }
+}
+
+TEST_CASE("Validator rejects invalid weight values") {
+    SECTION("rejects empty weights array") {
+        auto j = makeNamJson("0.5.0");
+        j["weights"] = json::array();
+        REQUIRE(Validator::validateNam(j) == false);
+    }
+
+    SECTION("rejects non-numeric weights") {
+        auto j = makeNamJson("0.5.0");
+        j["weights"] = {1.0, "not a number", 3.0};
+        REQUIRE(Validator::validateNam(j) == false);
+    }
+}
+
+TEST_CASE("Validator rejects architecture-specific config violations") {
+    SECTION("rejects LSTM without hidden_size") {
+        auto j = makeNamJson("0.5.0", "LSTM");
+        j["config"].erase("hidden_size");
+        REQUIRE(Validator::validateNam(j) == false);
+    }
+
+    SECTION("rejects LSTM with non-integer hidden_size") {
+        auto j = makeNamJson("0.5.0", "LSTM");
+        j["config"]["hidden_size"] = 3.5;
+        REQUIRE(Validator::validateNam(j) == false);
+    }
+
+    SECTION("rejects ConvNet without channels") {
+        auto j = makeNamJson("0.5.0");
+        j["architecture"] = "ConvNet";
+        j["config"]["out_channels"] = 16;
+        REQUIRE(Validator::validateNam(j) == false);
+    }
+
+    SECTION("rejects ConvNet without out_channels") {
+        auto j = makeNamJson("0.5.0");
+        j["architecture"] = "ConvNet";
+        j["config"]["channels"] = 8;
+        REQUIRE(Validator::validateNam(j) == false);
+    }
+
+    SECTION("rejects unknown architecture") {
+        auto j = makeNamJson("0.5.0");
+        j["architecture"] = "UnknownArch";
+        REQUIRE(Validator::validateNam(j) == false);
+    }
+}
+
+TEST_CASE("Validator rejects invalid version formats") {
+    SECTION("rejects version without proper semantic format") {
+        auto j = makeNamJson("0.5");  // Missing patch version
+        REQUIRE(Validator::validateNam(j) == false);
+    }
+
+    SECTION("rejects version below 0.5.0") {
+        auto j = makeNamJson("0.4.9");
+        REQUIRE(Validator::validateNam(j) == false);
+    }
+
+    SECTION("rejects non-semantic version formats") {
+        auto j = makeNamJson("0.5.0a");  // Invalid format
+        REQUIRE(Validator::validateNam(j) == false);
+
+        j["version"] = "0.5";  // Missing patch
+        REQUIRE(Validator::validateNam(j) == false);
     }
 }
 
