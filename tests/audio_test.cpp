@@ -1,4 +1,5 @@
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -112,9 +113,22 @@ int main(int argc, char* argv[]) {
   std::cout << "======================================================================\n\n";
 
   // File paths
-  std::string original_path = "/Users/gene/Downloads/Deluxe Reverb.nam";
-  std::string plus6_path = "/Users/gene/Downloads/Deluxe Reverb +6dB.nam";
-  std::string plus9_path = "/Users/gene/Downloads/Deluxe Reverb +9dB.nam";
+  // Use environment variable NAM_TEST_MODELS_DIR or default to ~/Downloads
+  std::string models_dir = []{
+    const char* env = std::getenv("NAM_TEST_MODELS_DIR");
+    if (env && std::strlen(env) > 0) {
+      return std::string(env);
+    }
+    const char* home = std::getenv("HOME");
+    if (home) {
+      return std::string(home) + "/Downloads";
+    }
+    return std::string(".");
+  }();
+
+  std::string original_path = models_dir + "/Deluxe Reverb.nam";
+  std::string plus6_path = models_dir + "/Deluxe Reverb +6dB.nam";
+  std::string plus9_path = models_dir + "/Deluxe Reverb +9dB.nam";
 
   // Generate test signal
   std::cout << "📊 Generating sine wave test signal...\n";
