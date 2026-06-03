@@ -113,8 +113,8 @@ int main(int argc, char* argv[]) {
 
   // File paths
   std::string original_path = "/Users/gene/Downloads/Deluxe Reverb.nam";
-  std::string plus6_path = "/Users/gene/Downloads/Deluxe Reverb_+6_0db.nam";
-  std::string plus9_path = "/Users/gene/Downloads/Deluxe Reverb_+9_0db.nam";
+  std::string plus6_path = "/Users/gene/Downloads/Deluxe Reverb +6dB.nam";
+  std::string plus9_path = "/Users/gene/Downloads/Deluxe Reverb +9dB.nam";
 
   // Generate test signal
   std::cout << "📊 Generating sine wave test signal...\n";
