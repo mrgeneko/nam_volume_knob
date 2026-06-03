@@ -183,7 +183,7 @@ CliParseResult CliHandler::parseArgs(int argc, char* argv[]) {
 
     for (const auto& in : args.inputPaths) {
         if (!fileExists(in)) {
-            result.error = "Error: Input file not found: " + in;
+            result.error = "Error: Input file does not exist or is not readable: " + in;
             return result;
         }
     }
@@ -251,7 +251,7 @@ CliRunResult CliHandler::run(const CliArgs& args) {
             auto j = NamParser::parseNamFile(inputPath);
             if (!Validator::validateNam(j)) {
                 result.exitCode = 3;
-                result.error = "Error: Invalid .nam file: " + inputPath;
+                result.error = "Error: Invalid .nam file format (missing required fields or corrupted): " + inputPath;
                 return result;
             }
 
@@ -259,7 +259,7 @@ CliRunResult CliHandler::run(const CliArgs& args) {
                 // Work on a fresh copy per gain.
                 auto jOut = j;
 
-                std::string arch = jOut["architecture"];
+                std::string arch = jOut["architecture"].get<std::string>();
                 float factor = args.useDb ? std::pow(10.0f, gain / 20.0f) : gain;
 
                 // Handle A2 (SlimmableContainer) models differently from flat architectures

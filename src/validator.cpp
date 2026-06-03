@@ -1,13 +1,28 @@
 #include "validator.h"
 #include <string>
+#include <regex>
 
 bool Validator::validateNam(const nlohmann::json& j) {
     if (!j.contains("version") || !j["version"].is_string()) return false;
-    std::string version = j["version"];
-    // Accept model versions 0.5.x and later (0.6, 0.7, etc.)
-    // Model version is independent from NAM package version
-    if (version.size() < 2 || version.substr(0, 2) != "0.") return false;
-    if (!j.contains("architecture") || !j.contains("config") || !j.contains("weights")) return false;
+    std::string version = j["version"].get<std::string>();
+
+    // Validate semantic version format: "0.X.Y" where X and Y are integers
+    std::regex versionPattern(R"(^0\.\d+\.\d+$)");
+    if (!std::regex_match(version, versionPattern)) return false;
+
+    // Require minimum version 0.5.0
+    std::string minorPart = version.substr(2, version.find('.', 2) - 2);
+    int minor = std::stoi(minorPart);
+    if (minor < 5) return false;
+
+    if (!j.contains("architecture") || !j["architecture"].is_string()) return false;
+    if (!j.contains("config") || !j["config"].is_object()) return false;
+    if (!j.contains("weights") || !j["weights"].is_array()) return false;
+
+    // Validate weights are all numeric
+    for (const auto& w : j["weights"]) {
+        if (!w.is_number()) return false;
+    }
 
     // Additional validation for A2 (SlimmableContainer) models
     if (j["architecture"].is_string() && j["architecture"].get<std::string>() == "SlimmableContainer") {
