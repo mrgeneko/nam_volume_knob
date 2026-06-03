@@ -24,6 +24,29 @@ bool Validator::validateNam(const nlohmann::json& j) {
         if (!w.is_number()) return false;
     }
 
+    // Validate architecture-specific config fields (A1 models)
+    std::string arch = j["architecture"].get<std::string>();
+    if (arch == "LSTM") {
+        if (!j["config"].contains("hidden_size") || !j["config"]["hidden_size"].is_number_integer()) {
+            return false;
+        }
+    } else if (arch == "ConvNet") {
+        if (!j["config"].contains("channels") || !j["config"]["channels"].is_number_integer()) {
+            return false;
+        }
+        if (!j["config"].contains("out_channels") || !j["config"]["out_channels"].is_number_integer()) {
+            return false;
+        }
+    } else if (arch == "WaveNet") {
+        // WaveNet doesn't strictly require specific config fields for weight scaling
+        // (head_scale is encoded as the last weight value)
+    } else if (arch == "Linear") {
+        // Linear model: minimal config requirements, no specific fields needed
+    } else if (arch != "SlimmableContainer") {
+        // Unknown architecture (not A1 or A2)
+        return false;
+    }
+
     // Additional validation for A2 (SlimmableContainer) models
     if (j["architecture"].is_string() && j["architecture"].get<std::string>() == "SlimmableContainer") {
         if (!j["config"].is_object()) return false;
