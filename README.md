@@ -13,7 +13,7 @@ Try it here: [https://mrgeneko.github.io/nam_volume_knob/](https://mrgeneko.gith
 - **Architecture Support**: Compatible with all NAM architectures (LSTM, WaveNet A2, ConvNet, Linear, and variants including SlimmableContainer).
 - **Verified Scaling**: Audio processing test verifies output levels match expected dB gains.
 - **Overwrite Prevention**: Automatic versioning (_v2, _v3, etc.) to avoid overwriting existing files.
-- **Metadata Updates**: Adjusts `loudness` metadata to reflect the new output level.
+- **Metadata Updates**: Adjusts `loudness` and `gain` metadata to reflect the new output level, ensuring the scaled output is accurately represented in the model.
 - **Cross-Platform**: Works on macOS, Windows, and Linux.
 
 ## Installation
@@ -135,7 +135,8 @@ The tool identifies the head/output scaling parameters for each architecture and
 - **Linear Mode**: Factor = gain value
 
 **Metadata updates:**
-- Updates `loudness` to reflect the new output level (informational; not used by NAM for normalization)
+- Updates `loudness` and `gain` metadata to reflect the new output level
+- Critical for hosts/DAWs that use loudness metadata for output normalization—ensures the scaled output is accurately represented
 - Maintains original model behavior while shifting output amplitude
 
 ## Limitations
@@ -159,6 +160,15 @@ cd build
 cmake -DNAM_VOLUME_KNOB_BUILD_AUDIO_TEST=ON ..
 make audio_test
 ./audio_test
+```
+
+**Configuration:**
+
+The test looks for model files in `$NAM_TEST_MODELS_DIR` or defaults to `$HOME/Downloads`:
+
+```bash
+./audio_test                    # Uses ~/Downloads
+NAM_TEST_MODELS_DIR=/path ./audio_test  # Use custom path
 ```
 
 **What it does:**
