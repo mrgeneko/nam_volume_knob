@@ -156,13 +156,8 @@ bool WeightScaler::tryScaleA2Model(nlohmann::json& model, float factor, std::str
         scaleWeights(weights, start, end, factor);
         model["weights"] = weights;
 
-        // For WaveNet, also scale the head_scale parameter which controls output level
-        if (arch == "WaveNet") {
-            if (model["config"].contains("head_scale") && model["config"]["head_scale"].is_number()) {
-                float head_scale = model["config"]["head_scale"].get<float>();
-                model["config"]["head_scale"] = head_scale * factor;
-            }
-        }
+        // Note: For WaveNet, head_scale is within the weights array (last weight)
+        // so we don't scale the config head_scale separately to avoid double-scaling
 
         // Scale loudness metadata so normalization doesn't negate the weight changes.
         // Loudness is in dB; factor of 2.0 = +6dB, so we add 20*log10(factor) to loudness.
