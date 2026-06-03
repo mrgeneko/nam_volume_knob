@@ -280,22 +280,9 @@ CliRunResult CliHandler::run(const CliArgs& args) {
                         WeightScaler::scaleWeights(weightsVec, start, end, factor);
                         jOut["weights"] = weightsVec;
 
-                        // Update metadata to reflect the scaling (prevents host normalization from undoing it)
+                        // Update metadata to reflect the scaling
                         float dbGain = args.useDb ? gain : 20.0f * std::log10(gain);
-                        if (jOut.contains("metadata") && jOut["metadata"].is_object()) {
-                            if (jOut["metadata"].contains("loudness") && jOut["metadata"]["loudness"].is_number()) {
-                                float loudness = jOut["metadata"]["loudness"].get<float>();
-                                jOut["metadata"]["loudness"] = loudness + dbGain;
-                            }
-                            if (jOut["metadata"].contains("gain") && jOut["metadata"]["gain"].is_number()) {
-                                float gain_val = jOut["metadata"]["gain"].get<float>();
-                                jOut["metadata"]["gain"] = gain_val + dbGain;
-                            }
-                        }
-                        if (jOut.contains("config") && jOut["config"].is_object() && jOut["config"].contains("output_level") && jOut["config"]["output_level"].is_number()) {
-                            float output_level = jOut["config"]["output_level"].get<float>();
-                            jOut["config"]["output_level"] = output_level + dbGain;
-                        }
+                        WeightScaler::updateMetadata(jOut, dbGain);
                     } catch (const std::exception& e) {
                         result.exitCode = 3;
                         result.error = "Error: Failed to scale A1 model: " + std::string(e.what());

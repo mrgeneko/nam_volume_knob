@@ -120,20 +120,7 @@ bool WeightScaler::tryScaleA2Model(nlohmann::json& model, float factor, std::str
 
         // Scale top-level metadata for the container
         float dbGain = 20.0f * std::log10(factor);
-        if (model.contains("metadata") && model["metadata"].is_object()) {
-            if (model["metadata"].contains("loudness") && model["metadata"]["loudness"].is_number()) {
-                float loudness = model["metadata"]["loudness"].get<float>();
-                model["metadata"]["loudness"] = loudness + dbGain;
-            }
-            if (model["metadata"].contains("gain") && model["metadata"]["gain"].is_number()) {
-                float gain = model["metadata"]["gain"].get<float>();
-                model["metadata"]["gain"] = gain + dbGain;
-            }
-        }
-        if (model.contains("config") && model["config"].is_object() && model["config"].contains("output_level") && model["config"]["output_level"].is_number()) {
-            float output_level = model["config"]["output_level"].get<float>();
-            model["config"]["output_level"] = output_level + dbGain;
-        }
+        updateMetadata(model, dbGain);
         return true;
     } else {
         // For non-container models (WaveNet, LSTM, ConvNet, Linear), scale the weights directly
@@ -159,23 +146,9 @@ bool WeightScaler::tryScaleA2Model(nlohmann::json& model, float factor, std::str
         // Note: For WaveNet, head_scale is within the weights array (last weight)
         // so we don't scale the config head_scale separately to avoid double-scaling
 
-        // Scale loudness metadata so normalization doesn't negate the weight changes.
-        // Loudness is in dB; factor of 2.0 = +6dB, so we add 20*log10(factor) to loudness.
+        // Update metadata to reflect the weight scaling
         float dbGain = 20.0f * std::log10(factor);
-        if (model.contains("metadata") && model["metadata"].is_object()) {
-            if (model["metadata"].contains("loudness") && model["metadata"]["loudness"].is_number()) {
-                float loudness = model["metadata"]["loudness"].get<float>();
-                model["metadata"]["loudness"] = loudness + dbGain;
-            }
-            if (model["metadata"].contains("gain") && model["metadata"]["gain"].is_number()) {
-                float gain = model["metadata"]["gain"].get<float>();
-                model["metadata"]["gain"] = gain + dbGain;
-            }
-        }
-        if (model.contains("config") && model["config"].is_object() && model["config"].contains("output_level") && model["config"]["output_level"].is_number()) {
-            float output_level = model["config"]["output_level"].get<float>();
-            model["config"]["output_level"] = output_level + dbGain;
-        }
+        updateMetadata(model, dbGain);
 
         return true;
     }
@@ -185,5 +158,25 @@ void WeightScaler::scaleA2Model(nlohmann::json& model, float factor) {
     std::string error;
     if (!tryScaleA2Model(model, factor, error)) {
         throw std::runtime_error(error);
+    }
+}
+
+void WeightScaler::updateMetadata(nlohmann::json& model, float dbGain) {
+    // Update loudness and gain metadata to reflect weight scaling.
+    // This prevents host normalization from negating the weight-level changes.
+    if (model.contains("metadata") && model["metadata"].is_object()) {
+        if (model["metadata"].contains("loudness") && model["metadata"]["loudness"].is_number()) {
+            float loudness = model["metadata"]["loudness"].get<float>();
+            model["metadata"]["loudness"] = loudness + dbGain;
+        }
+        if (model["metadata"].contains("gain") && model["metadata"]["gain"].is_number()) {
+            float gain = model["metadata"]["gain"].get<float>();
+            model["metadata"]["gain"] = gain + dbGain;
+        }
+    }
+    // Update output_level config field as well
+    if (model.contains("config") && model["config"].is_object() && model["config"].contains("output_level") && model["config"]["output_level"].is_number()) {
+        float output_level = model["config"]["output_level"].get<float>();
+        model["config"]["output_level"] = output_level + dbGain;
     }
 }

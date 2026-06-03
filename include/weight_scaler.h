@@ -15,6 +15,10 @@ public:
     // Scale A2 (SlimmableContainer) model by recursively scaling each submodel's head weights
     static bool tryScaleA2Model(nlohmann::json& model, float factor, std::string& error);
     static void scaleA2Model(nlohmann::json& model, float factor);
+
+    // Update model metadata (loudness, gain, output_level) to reflect scaling applied to weights
+    // This prevents host normalization from negating the weight-level changes
+    static void updateMetadata(nlohmann::json& model, float dbGain);
 };
 
 #endif // WEIGHT_SCALER_H
