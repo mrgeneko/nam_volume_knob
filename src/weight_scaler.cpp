@@ -117,6 +117,23 @@ bool WeightScaler::tryScaleA2Model(nlohmann::json& model, float factor, std::str
                 return false;
             }
         }
+
+        // Scale top-level metadata for the container
+        float dbGain = 20.0f * std::log10(factor);
+        if (model.contains("metadata") && model["metadata"].is_object()) {
+            if (model["metadata"].contains("loudness") && model["metadata"]["loudness"].is_number()) {
+                float loudness = model["metadata"]["loudness"].get<float>();
+                model["metadata"]["loudness"] = loudness + dbGain;
+            }
+            if (model["metadata"].contains("gain") && model["metadata"]["gain"].is_number()) {
+                float gain = model["metadata"]["gain"].get<float>();
+                model["metadata"]["gain"] = gain + dbGain;
+            }
+        }
+        if (model.contains("config") && model["config"].contains("output_level") && model["config"]["output_level"].is_number()) {
+            float output_level = model["config"]["output_level"].get<float>();
+            model["config"]["output_level"] = output_level + dbGain;
+        }
         return true;
     } else {
         // For non-container models (WaveNet, LSTM, ConvNet, Linear), scale the weights directly
