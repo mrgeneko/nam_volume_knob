@@ -62,6 +62,7 @@ if(NAM_VOLUME_KNOB_BUILD_AUDIO_TEST)
         third_party/NeuralAmpModelerCore/Dependencies
         third_party/NeuralAmpModelerCore/Dependencies/nlohmann)
     target_compile_options(audio_test PRIVATE -O2)
+    target_compile_definitions(audio_test PRIVATE NAM_ENABLE_A2_FAST)
 endif()
 
 # Platform-specific flags
