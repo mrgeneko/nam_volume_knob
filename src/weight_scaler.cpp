@@ -137,6 +137,15 @@ bool WeightScaler::tryScaleA2Model(nlohmann::json& model, float factor, std::str
 
         scaleWeights(weights, start, end, factor);
         model["weights"] = weights;
+
+        // For WaveNet, also scale the head_scale parameter which controls output level
+        if (arch == "WaveNet") {
+            if (model["config"].contains("head_scale") && model["config"]["head_scale"].is_number()) {
+                float head_scale = model["config"]["head_scale"].get<float>();
+                model["config"]["head_scale"] = head_scale * factor;
+            }
+        }
+
         return true;
     }
 }

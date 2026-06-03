@@ -7,6 +7,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Include directories
 include_directories(include)
 include_directories(third_party)
+include_directories(third_party/NeuralAmpModelerCore)
+
+# Find Eigen (required by NeuralAmpModelerCore)
+find_package(Eigen3 REQUIRED)
 
 # Source files
 set(SOURCES
@@ -42,6 +46,20 @@ if(NAM_VOLUME_KNOB_BUILD_TESTS AND NOT EMSCRIPTEN)
     else()
         message(WARNING "Catch2 not found; tests target will not be built. Set Catch2_DIR or install Catch2.")
     endif()
+endif()
+
+# Audio processing test
+option(NAM_VOLUME_KNOB_BUILD_AUDIO_TEST "Build audio processing test using NeuralAmpModelerCore" OFF)
+if(NAM_VOLUME_KNOB_BUILD_AUDIO_TEST)
+    file(GLOB NAM_CORE_SOURCES "third_party/NeuralAmpModelerCore/NAM/*.cpp")
+    add_executable(audio_test tests/audio_test.cpp ${NAM_CORE_SOURCES})
+    target_link_libraries(audio_test Eigen3::Eigen)
+    target_include_directories(audio_test PRIVATE
+        third_party
+        third_party/NeuralAmpModelerCore
+        third_party/NeuralAmpModelerCore/Dependencies
+        third_party/NeuralAmpModelerCore/Dependencies/nlohmann)
+    target_compile_options(audio_test PRIVATE -O2)
 endif()
 
 # Platform-specific flags

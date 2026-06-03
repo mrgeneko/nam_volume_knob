@@ -1,0 +1,180 @@
+#include <cmath>
+#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <vector>
+
+#include "../third_party/NeuralAmpModelerCore/NAM/dsp.h"
+#include "../third_party/NeuralAmpModelerCore/NAM/get_dsp.h"
+#include "../third_party/NeuralAmpModelerCore/NAM/wavenet/model.h"
+#include "../third_party/NeuralAmpModelerCore/NAM/convnet.h"
+#include "../third_party/NeuralAmpModelerCore/NAM/lstm.h"
+#include "../third_party/NeuralAmpModelerCore/NAM/slimmable.h"
+
+std::vector<double> generate_sine_wave(double frequency, double duration, double sample_rate) {
+  int num_samples = static_cast<int>(duration * sample_rate);
+  std::vector<double> signal(num_samples);
+  double amplitude = 0.1;  // Avoid clipping
+  double two_pi = 2.0 * M_PI;
+
+  for (int i = 0; i < num_samples; ++i) {
+    double t = static_cast<double>(i) / sample_rate;
+    signal[i] = amplitude * std::sin(two_pi * frequency * t);
+  }
+  return signal;
+}
+
+struct MeasurementResult {
+  double peak;
+  double rms;
+};
+
+MeasurementResult measure_signal(const std::vector<double>& signal) {
+  MeasurementResult result{0.0, 0.0};
+
+  // Measure peak
+  for (double sample : signal) {
+    double abs_sample = std::fabs(sample);
+    if (abs_sample > result.peak) {
+      result.peak = abs_sample;
+    }
+  }
+
+  // Measure RMS
+  double sum_squares = 0.0;
+  for (double sample : signal) {
+    sum_squares += sample * sample;
+  }
+  result.rms = std::sqrt(sum_squares / static_cast<double>(signal.size()));
+
+  return result;
+}
+
+double to_db(double value1, double value2) {
+  if (value2 == 0.0) return 0.0;
+  return 20.0 * std::log10(value1 / value2);
+}
+
+int main(int argc, char* argv[]) {
+  std::cout << "======================================================================\n";
+  std::cout << "NAM Volume Knob Audio Test\n";
+  std::cout << "======================================================================\n\n";
+
+  // File paths
+  std::string original_path = "/Users/gene/Downloads/Deluxe Reverb.nam";
+  std::string plus6_path = "/Users/gene/Downloads/Deluxe Reverb_+6_0db.nam";
+  std::string plus9_path = "/Users/gene/Downloads/Deluxe Reverb_+9_0db.nam";
+
+  // Generate test signal
+  std::cout << "📊 Generating sine wave test signal...\n";
+  double sample_rate = 48000.0;
+  auto audio = generate_sine_wave(1000.0, 2.0, sample_rate);
+  auto input_measurement = measure_signal(audio);
+  std::cout << "   Input signal: Peak=" << input_measurement.peak << ", RMS=" << input_measurement.rms
+            << "\n\n";
+
+  // Load models
+  std::cout << "📂 Loading NAM models...\n";
+  std::unique_ptr<nam::DSP> model_original;
+  std::unique_ptr<nam::DSP> model_plus6;
+  std::unique_ptr<nam::DSP> model_plus9;
+
+  try {
+    std::cout << "   Loading original...", std::cout.flush();
+    model_original = nam::get_dsp(std::filesystem::path(original_path));
+    std::cout << " ✓\n";
+  } catch (const std::exception& e) {
+    std::cerr << " ❌ FAILED: " << e.what() << "\n";
+    return 1;
+  }
+
+  try {
+    std::cout << "   Loading +6dB...", std::cout.flush();
+    model_plus6 = nam::get_dsp(std::filesystem::path(plus6_path));
+    std::cout << " ✓\n";
+  } catch (const std::exception& e) {
+    std::cerr << " ❌ FAILED: " << e.what() << "\n";
+    return 1;
+  }
+
+  try {
+    std::cout << "   Loading +9dB...", std::cout.flush();
+    model_plus9 = nam::get_dsp(std::filesystem::path(plus9_path));
+    std::cout << " ✓\n\n";
+  } catch (const std::exception& e) {
+    std::cerr << " ❌ FAILED: " << e.what() << "\n";
+    return 1;
+  }
+
+  // Reset models
+  model_original->Reset(sample_rate, static_cast<int>(audio.size()));
+  model_original->prewarm();
+  model_plus6->Reset(sample_rate, static_cast<int>(audio.size()));
+  model_plus6->prewarm();
+  model_plus9->Reset(sample_rate, static_cast<int>(audio.size()));
+  model_plus9->prewarm();
+
+  // Process audio
+  std::cout << "🔊 Processing audio through models...\n";
+
+  auto process_model = [&](nam::DSP* model, const std::string& name) -> MeasurementResult {
+    std::cout << "   " << name << "...", std::cout.flush();
+
+    // Create buffer for processing
+    std::vector<double> audio_copy = audio;
+    std::vector<double> output(audio.size(), 0.0);
+
+    double* input[] = {audio_copy.data()};
+    double* output_ptr[] = {output.data()};
+
+    model->process(input, output_ptr, static_cast<int>(audio.size()));
+
+    auto result = measure_signal(output);
+    std::cout << " ✓ (Peak=" << result.peak << ", RMS=" << result.rms << ")\n";
+
+    return result;
+  };
+
+  auto orig_result = process_model(model_original.get(), "Original");
+  auto plus6_result = process_model(model_plus6.get(), "+6dB");
+  auto plus9_result = process_model(model_plus9.get(), "+9dB");
+
+  // Compare results
+  std::cout << "\n📈 Comparison:\n";
+  std::cout << "----------------------------------------------------------------------\n";
+
+  auto compare = [&](const std::string& name, const MeasurementResult& result, int expected_db) {
+    double peak_db = to_db(result.peak, orig_result.peak);
+    double rms_db = to_db(result.rms, orig_result.rms);
+
+    std::cout << "\n" << name << " vs Original:\n";
+    std::cout << "   Peak: " << result.peak << " (" << std::showpos << peak_db << std::noshowpos
+              << " dB, expected " << expected_db << " dB)\n";
+    std::cout << "   RMS:  " << result.rms << " (" << std::showpos << rms_db << std::noshowpos
+              << " dB)\n";
+
+    double tolerance = 1.0;  // 1dB tolerance for model dynamics
+    bool peak_match = std::fabs(peak_db - expected_db) < tolerance;
+
+    if (peak_match) {
+      std::cout << "   ✓ PASS (within tolerance)\n";
+      return true;
+    } else {
+      std::cout << "   ⚠ WARNING: Expected ~" << expected_db << "dB, got " << std::showpos << peak_db
+                << std::noshowpos << "dB\n";
+      return false;
+    }
+  };
+
+  bool pass6 = compare("+6dB", plus6_result, 6);
+  bool pass9 = compare("+9dB", plus9_result, 9);
+
+  std::cout << "\n" << std::string(70, '=') << "\n";
+  if (pass6 && pass9) {
+    std::cout << "✅ ALL TESTS PASSED\n";
+    return 0;
+  } else {
+    std::cout << "❌ SOME TESTS FAILED\n";
+    return 1;
+  }
+}
