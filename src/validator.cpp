@@ -1,6 +1,7 @@
 #include "validator.h"
 #include <string>
 #include <regex>
+#include <cmath>
 
 bool Validator::validateNam(const nlohmann::json& j) {
     if (!j.contains("version") || !j["version"].is_string()) return false;
@@ -12,16 +13,24 @@ bool Validator::validateNam(const nlohmann::json& j) {
 
     // Require minimum version 0.5.0
     std::string minorPart = version.substr(2, version.find('.', 2) - 2);
-    int minor = std::stoi(minorPart);
+    int minor;
+    try {
+        minor = std::stoi(minorPart);
+    } catch (const std::out_of_range&) {
+        // Version number is too large to fit in int
+        return false;
+    }
     if (minor < 5) return false;
 
     if (!j.contains("architecture") || !j["architecture"].is_string()) return false;
     if (!j.contains("config") || !j["config"].is_object()) return false;
-    if (!j.contains("weights") || !j["weights"].is_array()) return false;
+    if (!j.contains("weights") || !j["weights"].is_array() || j["weights"].empty()) return false;
 
-    // Validate weights are all numeric
+    // Validate weights are all numeric and finite (no NaN or Infinity)
     for (const auto& w : j["weights"]) {
         if (!w.is_number()) return false;
+        double value = w.get<double>();
+        if (!std::isfinite(value)) return false;  // Reject NaN, Infinity, -Infinity
     }
 
     // Validate architecture-specific config fields (A1 models)

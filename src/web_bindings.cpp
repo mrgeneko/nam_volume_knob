@@ -8,9 +8,21 @@
 #include <iomanip>
 #include <sstream>
 
+// Gain limits (must match CLI limits for consistency)
+static constexpr float kMaxGainDb = 9.0f;
+static constexpr float kMaxGainLinear = 2.8183829312644537f;  // pow(10, 9/20)
+
 std::string processNam(const std::string& jsonStr, float factor, float gainDb) {
     // Important: the shipped wasm may be built without exception catching.
     // Avoid throwing C++ exceptions here; return "Error: ..." strings instead.
+
+    // Validate gain parameters (defensive programming - web layer should also validate)
+    if (!std::isfinite(factor) || factor <= 0.0f || factor > kMaxGainLinear) {
+        return "Error: Gain factor must be > 0 and <= " + std::to_string(kMaxGainLinear);
+    }
+    if (!std::isfinite(gainDb) || gainDb > kMaxGainDb) {
+        return "Error: Gain must be <= " + std::to_string(kMaxGainDb) + " dB";
+    }
 
     auto j = nlohmann::json::parse(jsonStr, nullptr, false);
     if (j.is_discarded()) {
